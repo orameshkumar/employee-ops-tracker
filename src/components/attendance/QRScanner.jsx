@@ -58,6 +58,7 @@ export default function QRScanner() {
   const [scanning, setScanning] = useState(false)
   const [message, setMessage] = useState(null)
   const scannerRef = useRef(null)
+  const cameraIdRef = useRef(null) // resolved deviceId for back camera
   const [permState, setPermState] = useState('idle') // 'idle' | 'requesting' | 'granted' | 'denied'
   const [diag, setDiag] = useState(null)
 
@@ -73,37 +74,64 @@ export default function QRScanner() {
   useEffect(() => { reload() }, [user.uid])
   useEffect(() => { collectDiag().then(setDiag) }, [])
 
-  // Explicitly request camera permission before starting the scanner.
-  // This triggers the browser's native permission prompt on iOS / Android,
-  // lets us detect denial clearly, and releases the test stream before
-  // html5-qrcode opens its own stream.
+  async function resolveCamera() {
+    try {
+      const cameras = await Html5Qrcode.getCameras()
+      if (cameras && cameras.length > 0) {
+        const back = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[cameras.length - 1]
+        cameraIdRef.current = back?.id || null
+      }
+    } catch (_) { cameraIdRef.current = null }
+  }
+
   async function requestCameraAndScan() {
     setMessage(null)
     setPermState('requesting')
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      stream.getTracks().forEach(t => t.stop()) // release immediately; scanner will re-open
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMessage({ ok: false, text: '⛔ Camera API not supported. Use Chrome or Safari on your device.' })
+      setPermState('denied')
+      return
+    }
+
+    // If permission is already granted, go straight to scanner — opening a
+    // test stream then closing it causes a camera hardware release delay on
+    // iOS/Android, which makes html5-qrcode get a black feed.
+    const d = await collectDiag()
+    setDiag(d)
+    if (d.permState === 'granted') {
       setPermState('granted')
+      await resolveCamera()
       setScanning(true)
+      return
+    }
+
+    // Permission unknown or prompt — do a minimal test stream to trigger the
+    // native browser permission dialog, then release it.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      stream.getTracks().forEach(t => t.stop())
+      setPermState('granted')
+      await resolveCamera()
+      // Brief pause so camera hardware fully releases before html5-qrcode
+      // reopens it — prevents black screen on iOS.
+      setTimeout(() => setScanning(true), 400)
     } catch (err) {
       setPermState('denied')
       const name = err?.name || ''
-      const d = await collectDiag()
-      setDiag(d)
+      const iosHint = d.isIOS
+        ? '\n\niOS fix: Settings → Safari → Camera → Allow, then reload the page.'
+        : '\n\nFix: tap the 🔒 icon in the address bar → allow Camera → reload.'
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        const iosHint = d.isIOS ? '\n\niOS: Settings → Safari → Camera → Allow' : '\n\nTap the 🔒 icon in the address bar → allow Camera → refresh.'
         setMessage({ ok: false, text: `🚫 Camera permission denied. [${name}]${iosHint}` })
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        setMessage({ ok: false, text: `📷 No camera found. [${name}]\n\nMake sure your device has a camera and it is not disabled.` })
+        setMessage({ ok: false, text: `📷 No camera found on this device. [${name}]` })
       } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-        setMessage({ ok: false, text: `📷 Camera is in use by another app. [${name}]\n\nClose other apps using the camera and try again.` })
-      } else if (name === 'SecurityError') {
-        setMessage({ ok: false, text: `🔒 Camera blocked — app must be on HTTPS. [${name}]` })
-      } else if (name === 'OverconstrainedError') {
-        setMessage({ ok: false, text: `📷 Back camera not available. [${name}]\n\nTrying without camera preference — tap the button again.` })
+        setMessage({ ok: false, text: `📷 Camera in use by another app. [${name}]\n\nClose it and try again.` })
       } else {
-        setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown'}\n\nUA: ${navigator.userAgent.slice(0, 80)}` })
+        setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown'}` })
       }
+      collectDiag().then(setDiag)
     }
   }
 
@@ -126,9 +154,15 @@ export default function QRScanner() {
     const scanner = new Html5Qrcode('qr-reader', { verbose: false })
     scannerRef.current = scanner
 
+    // cameraIdRef resolved in requestCameraAndScan (async, before setScanning).
+    // Using deviceId is more reliable than facingMode on Android (no black feed).
+    const cameraConstraint = cameraIdRef.current
+      ? { deviceId: { exact: cameraIdRef.current } }
+      : { facingMode: 'environment' }
+
     scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, aspectRatio: 1.0 },
+      cameraConstraint,
+      { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize } },
       async (decodedText) => {
         try { await scanner.stop() } catch (_) {}
         scannerRef.current = null
@@ -136,8 +170,6 @@ export default function QRScanner() {
         setPermState('idle')
         try {
           const data = JSON.parse(decodedText)
-
-          // Shop QR: { action: "in" | "out" }
           if (data.action) {
             if (data.action === 'in') {
               await checkIn(user.uid, profile?.name || user.email)
@@ -147,14 +179,10 @@ export default function QRScanner() {
               await checkOut(user.uid, needsClosure)
               setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
             }
-            reload()
-            return
+            reload(); return
           }
-
-          // Legacy per-employee QR: { uid, name }
           if (data.uid && data.uid !== user.uid) {
-            setMessage({ ok: false, text: 'QR code does not match your account.' })
-            return
+            setMessage({ ok: false, text: 'QR code does not match your account.' }); return
           }
           if (!isCheckedIn) {
             await checkIn(user.uid, profile?.name || user.email)
@@ -169,10 +197,9 @@ export default function QRScanner() {
           setMessage({ ok: false, text: err.message })
         }
       },
-      () => {} // frame error — ignore
+      () => {} // frame decode error — ignore
     ).then(() => {
-      // iOS Safari requires playsinline on the video element to show the feed.
-      // html5-qrcode injects its own <video> — patch it immediately after start.
+      // scanner.start() resolves when camera is open — patch playsinline for iOS Safari
       const v = document.querySelector('#qr-reader video')
       if (v) {
         v.setAttribute('playsinline', '')
@@ -180,17 +207,18 @@ export default function QRScanner() {
         v.muted = true
       }
     }).catch(err => {
-      console.error('Camera error:', err)
+      console.error('Scanner start error:', err)
       scannerRef.current = null
       setScanning(false)
       setPermState('idle')
-      const msg = err?.message?.toLowerCase() || ''
-      if (msg.includes('permission') || msg.includes('notallowed')) {
-        setMessage({ ok: false, text: '🚫 Camera permission denied. Allow camera access in your browser settings and try again.' })
-      } else if (msg.includes('notfound') || msg.includes('devicenotfound')) {
-        setMessage({ ok: false, text: '📷 No camera found on this device.' })
+      const name = err?.name || ''
+      const msg  = err?.message?.toLowerCase() || ''
+      if (name === 'NotAllowedError' || msg.includes('permission') || msg.includes('notallowed')) {
+        setMessage({ ok: false, text: `🚫 Camera permission denied. [${name || 'NotAllowedError'}]\n\nAllow camera access in your browser settings and try again.` })
+      } else if (name === 'NotFoundError' || msg.includes('notfound')) {
+        setMessage({ ok: false, text: `📷 No camera found. [${name}]` })
       } else {
-        setMessage({ ok: false, text: `Camera error: ${err?.message || 'Unknown error'}` })
+        setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown'}` })
       }
     })
 
@@ -201,7 +229,7 @@ export default function QRScanner() {
         scannerRef.current = null
       }
     }
-  }, [scanning]) // ← runs after DOM update — #qr-reader is guaranteed to exist
+  }, [scanning])
 
   async function stopScan() {
     if (scannerRef.current) {

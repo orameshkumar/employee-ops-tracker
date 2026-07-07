@@ -85,22 +85,23 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
 
     let stream
     try {
-      // First attempt: back/environment camera
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-    } catch (err1) {
-      const parsed = camErrMsg(err1)
-      if (parsed.fix === 'constraint') {
-        // Retry without facing mode constraint
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true })
-        } catch (err2) {
-          setError(camErrMsg(err2))
-          setStep('error')
-          collectDiag().then(setDiag)
-          return
-        }
-      } else {
-        setError(parsed)
+      // Build constraint: prefer back camera by deviceId (more reliable than
+      // facingMode which can return a black feed on many Android devices).
+      let constraint = { video: true }
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const cams = devices.filter(d => d.kind === 'videoinput')
+        const back = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1]
+        if (back?.deviceId) constraint = { video: { deviceId: { exact: back.deviceId } } }
+      } catch (_) { /* fall back to plain { video: true } */ }
+
+      stream = await navigator.mediaDevices.getUserMedia(constraint)
+    } catch (err) {
+      // If exact deviceId failed, retry with no constraints
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      } catch (err2) {
+        setError(camErrMsg(err2))
         setStep('error')
         collectDiag().then(setDiag)
         return
@@ -122,7 +123,11 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
     const video = videoRef.current
     if (!video) return
     video.srcObject = streamRef.current
-    video.play().catch(() => {})
+    // playsInline is required on iOS to show inline video (not fullscreen)
+    video.setAttribute('playsinline', '')
+    video.setAttribute('webkit-playsinline', '')
+    video.muted = true
+    video.play().catch(e => console.warn('video.play() failed:', e))
   }, [step])
 
   function capturePhoto() {
