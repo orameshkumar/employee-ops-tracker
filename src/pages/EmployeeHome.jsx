@@ -9,15 +9,15 @@ import HistoryPage from '../components/history/HistoryPage'
 import { useAuth } from '../contexts/AuthContext'
 
 const s = {
-  page: { minHeight: '100vh', background: '#0f172a' },
+  page: { minHeight: '100vh', background: 'var(--app-bg, #0f172a)' },
   dashboard: { padding: 24, maxWidth: 700, margin: '0 auto' },
   welcome: { color: '#38bdf8', fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 },
-  date: { color: '#64748b', fontSize: '0.85rem', marginBottom: 24 },
+  date: { color: 'var(--app-muted, #64748b)', fontSize: '0.85rem', marginBottom: 24 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 },
-  tile: (c) => ({ background: '#1e293b', borderRadius: 12, padding: 20, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
+  tile: (c) => ({ background: 'var(--app-surface, #1e293b)', borderRadius: 12, padding: 20, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
   tileIcon: { fontSize: '2rem', marginBottom: 8 },
-  tileLabel: { color: '#e2e8f0', fontWeight: 700, fontSize: '0.9rem' },
-  tileSub: { color: '#64748b', fontSize: '0.75rem', marginTop: 3 },
+  tileLabel: { color: 'var(--app-text, #e2e8f0)', fontWeight: 700, fontSize: '0.9rem' },
+  tileSub: { color: 'var(--app-muted, #64748b)', fontSize: '0.75rem', marginTop: 3 },
 }
 
 const TILES = [

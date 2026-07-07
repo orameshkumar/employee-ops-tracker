@@ -8,27 +8,33 @@ import Reports from '../components/dashboard/Reports'
 import AppConfig from '../components/config/AppConfig'
 import EmployeeManagement from '../components/employees/EmployeeManagement'
 import HistoryPage from '../components/history/HistoryPage'
+import BackupRestore from '../components/backup/BackupRestore'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
+import { loadSettings } from '../hooks/useAppSettings'
 
 const s = {
-  page: { minHeight: '100vh', background: '#0f172a' },
+  page: { minHeight: '100vh', background: 'var(--app-bg, #0f172a)' },
   dash: { padding: 24, maxWidth: 900, margin: '0 auto' },
   welcome: { color: '#38bdf8', fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 },
-  date: { color: '#64748b', fontSize: '0.85rem', marginBottom: 24 },
+  date: { color: 'var(--app-muted, #64748b)', fontSize: '0.85rem', marginBottom: 24 },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 24 },
-  stat: (c) => ({ background: '#1e293b', borderRadius: 12, padding: 18, border: `1px solid ${c}` }),
-  statVal: { fontSize: '1.6rem', fontWeight: 800, color: '#e2e8f0', marginBottom: 2 },
-  statLabel: { color: '#64748b', fontSize: '0.8rem' },
-  section: { background: '#1e293b', borderRadius: 12, border: '1px solid #334155', marginBottom: 16, overflow: 'hidden' },
-  sectionHead: { padding: '12px 18px', background: '#162032', color: '#94a3b8', fontWeight: 700, fontSize: '0.85rem', borderBottom: '1px solid #334155' },
+  stat: (c) => ({ background: 'var(--app-surface, #1e293b)', borderRadius: 12, padding: 18, border: `1px solid ${c}` }),
+  statVal: { fontSize: '1.6rem', fontWeight: 800, color: 'var(--app-text, #e2e8f0)', marginBottom: 2 },
+  statLabel: { color: 'var(--app-muted, #64748b)', fontSize: '0.8rem' },
+  section: { background: 'var(--app-surface, #1e293b)', borderRadius: 12, border: '1px solid var(--app-border, #334155)', marginBottom: 16, overflow: 'hidden' },
+  sectionHead: { padding: '12px 18px', background: 'var(--app-surface-deep, #0f172a)', color: '#94a3b8', fontWeight: 700, fontSize: '0.85rem', borderBottom: '1px solid var(--app-border, #334155)' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', borderBottom: '1px solid #1e293b', background: '#0f172a' },
-  td: { padding: '10px 14px', fontSize: '0.82rem', color: '#e2e8f0', borderBottom: '1px solid #1e293b' },
+  th: { padding: '10px 14px', textAlign: 'left', color: 'var(--app-muted, #64748b)', fontSize: '0.75rem', borderBottom: '1px solid var(--app-border, #334155)', background: 'var(--app-surface-deep, #0f172a)' },
+  td: { padding: '10px 14px', fontSize: '0.82rem', color: 'var(--app-text, #e2e8f0)', borderBottom: '1px solid var(--app-border, #334155)' },
   badge: (c) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 700, background: c === 'in' ? '#14532d' : '#1e3a5f', color: c === 'in' ? '#4ade80' : '#60a5fa' }),
-  tileGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 },
-  tile: (c) => ({ background: '#1e293b', borderRadius: 10, padding: 16, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
+  tileGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 16 },
+  tile: (c) => ({ background: 'var(--app-surface, #1e293b)', borderRadius: 10, padding: 16, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
   tileIcon: { fontSize: '1.6rem', marginBottom: 6 },
-  tileLabel: { color: '#e2e8f0', fontWeight: 700, fontSize: '0.85rem' },
+  tileLabel: { color: 'var(--app-text, #e2e8f0)', fontWeight: 700, fontSize: '0.85rem' },
+  reminderBanner: { background: '#2d1b00', border: '1px solid #d97706', borderRadius: 10, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
+  reminderText: { color: '#fcd34d', fontSize: '0.85rem', fontWeight: 600 },
+  reminderSub: { color: '#d97706', fontSize: '0.75rem' },
+  reminderBtn: { background: '#d97706', color: '#1a0d00', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap' },
 }
 
 const TILES = [
@@ -37,6 +43,7 @@ const TILES = [
   { icon: '🧾', label: 'Expenses', path: '/manager/expenses', color: '#ec4899' },
   { icon: '📋', label: 'History', path: '/manager/history', color: '#06b6d4' },
   { icon: '📊', label: 'Reports', path: '/manager/reports', color: '#f97316' },
+  { icon: '🗄️', label: 'Backup', path: '/manager/backup', color: '#d97706' },
   { icon: '⚙️', label: 'Config', path: '/manager/config', color: '#6366f1' },
 ]
 
@@ -44,12 +51,22 @@ function Dashboard() {
   const [attendance, setAttendance] = useState([])
   const [sales, setSales] = useState([])
   const [error, setError] = useState(null)
+  const [backupWarning, setBackupWarning] = useState(null)
   const todayStr = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     Promise.all([getAllAttendance(todayStr), getAllSales(todayStr)])
       .then(([att, sal]) => { setAttendance(att); setSales(sal) })
       .catch(err => setError(err.message))
+    loadSettings().then(cfg => {
+      const days = cfg.backupReminderDays ?? 7
+      if (days === 0) return
+      const dismissedAt = localStorage.getItem('backup-banner-dismissed')
+      if (dismissedAt === todayStr) return
+      if (!cfg.lastBackupDate) { setBackupWarning({ days: null }); return }
+      const elapsed = Math.floor((Date.now() - new Date(cfg.lastBackupDate).getTime()) / 86400000)
+      if (elapsed >= days) setBackupWarning({ days: elapsed, last: cfg.lastBackupDate })
+    }).catch(() => {})
   }, [todayStr])
 
   // Group sessions by employee uid for summary counts
@@ -71,6 +88,23 @@ function Dashboard() {
       <div style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
 
       {error && <div style={{ background: '#450a0a', color: '#fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
+
+      {backupWarning && (
+        <div style={s.reminderBanner}>
+          <div>
+            <div style={s.reminderText}>⚠️ Backup Reminder</div>
+            <div style={s.reminderSub}>
+              {backupWarning.days === null
+                ? 'You have never backed up your data.'
+                : `Last backup was ${backupWarning.days} day${backupWarning.days !== 1 ? 's' : ''} ago (${backupWarning.last}).`}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link to="/manager/backup" style={{ ...s.reminderBtn, textDecoration: 'none' }}>🗄️ Backup Now</Link>
+            <button style={{ ...s.reminderBtn, background: '#4a3a1a' }} onClick={() => { localStorage.setItem('backup-banner-dismissed', todayStr); setBackupWarning(null) }}>Dismiss</button>
+          </div>
+        </div>
+      )}
 
       <div style={s.tileGrid}>
         {TILES.map(t => <Link key={t.path} to={t.path} style={s.tile(t.color)}><div style={s.tileIcon}>{t.icon}</div><div style={s.tileLabel}>{t.label}</div></Link>)}
@@ -158,6 +192,7 @@ export default function ManagerHome() {
         <Route path="reports" element={<Reports />} />
         <Route path="employees" element={<EmployeeManagement />} />
         <Route path="history" element={<HistoryPage />} />
+        <Route path="backup" element={<BackupRestore />} />
         <Route path="config" element={<AppConfig />} />
       </Routes>
     </div>

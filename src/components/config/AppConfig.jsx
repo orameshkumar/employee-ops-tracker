@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
+import { useTheme, THEMES } from '../../contexts/ThemeContext'
 
 const s = {
   wrap: { padding: 24, maxWidth: 660, margin: '0 auto' },
@@ -23,6 +24,10 @@ const s = {
   addInput: { flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px dashed #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none' },
   addBtn: { padding: '8px 16px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 700, background: '#166534', color: '#4ade80', fontSize: '0.85rem', flexShrink: 0 },
   taskCount: { color: '#475569', fontSize: '0.75rem', marginBottom: 10 },
+  themeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginTop: 4 },
+  themeCard: (active, accent) => ({ padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: active ? `2px solid ${accent}` : '2px solid transparent', background: 'var(--app-surface-deep, #0f172a)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'border-color 0.15s' }),
+  themeDot: (color) => ({ width: 20, height: 20, borderRadius: '50%', background: color }),
+  themeLabel: (active) => ({ fontSize: '0.78rem', fontWeight: active ? 700 : 400, color: active ? 'var(--app-text, #e2e8f0)' : 'var(--app-muted, #64748b)', textAlign: 'center' }),
 }
 
 function TaskListEditor({ tasks, onChange, accentColor = '#3b82f6' }) {
@@ -97,6 +102,7 @@ export default function AppConfig() {
   const [form, setForm] = useState(DEFAULT_SETTINGS)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const { themeKey, setTheme } = useTheme()
 
   useEffect(() => {
     loadSettings().then(setForm)
@@ -127,6 +133,32 @@ export default function AppConfig() {
       <div style={s.sub}>Manage shop settings, task lists, and image upload preferences</div>
       {saved && <div style={s.success}>✅ Settings saved successfully!</div>}
       <form onSubmit={handleSubmit}>
+
+        <div style={s.section}>
+          <div style={s.sectionTitle}>🎨 App Theme</div>
+          <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: 12 }}>
+            Choose your preferred color scheme — changes apply instantly
+          </div>
+          <div style={s.themeGrid}>
+            {Object.entries(THEMES).map(([key, t]) => (
+              <button
+                key={key}
+                type="button"
+                style={s.themeCard(themeKey === key, t.accent)}
+                onClick={() => setTheme(key)}
+              >
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <div style={s.themeDot(t.bg)} />
+                  <div style={s.themeDot(t.surface)} />
+                  <div style={s.themeDot(t.accent)} />
+                </div>
+                <div style={{ fontSize: '1rem' }}>{t.icon}</div>
+                <div style={s.themeLabel(themeKey === key)}>{t.name}</div>
+                {themeKey === key && <div style={{ fontSize: '0.65rem', color: t.accent, fontWeight: 700 }}>Active</div>}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div style={s.section}>
           <div style={s.sectionTitle}>🏪 Shop Identity</div>

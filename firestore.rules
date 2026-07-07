@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isManager() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Users collection
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid);
+      allow update, delete: if isOwner(uid) || isManager();
+    }
+
+    // Attendance — any signed-in employee can write their own; manager can read all
+    match /attendance/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isManager());
+    }
+
+    // Daily tasks
+    match /dailyTasks/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isManager());
+    }
+
+    // Closure tasks
+    match /closureTasks/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isManager());
+    }
+
+    // Sales — employee writes own; manager can read/edit/delete all
+    match /sales/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isManager());
+    }
+
+    // Expenses — employee submits own; manager can read/edit/delete/approve all
+    match /expenses/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isManager());
+    }
+
+    // App settings — only manager can write; all signed-in can read
+    match /settings/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isManager();
+    }
+  }
+}
