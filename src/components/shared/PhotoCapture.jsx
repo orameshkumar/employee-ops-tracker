@@ -209,40 +209,40 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
         </>
       )}
 
+      {/* Diagnostics — shown above the open button so it's immediately visible */}
+      {diag && (step === 'idle' || step === 'error') && (
+        <div style={{ marginTop: 10, background: '#0f172a', borderRadius: 8, padding: '10px 12px', border: '1px solid #1e293b' }}>
+          <div style={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', marginBottom: 8 }}>📋 CAMERA STATUS</div>
+          {[
+            { label: 'HTTPS',      ok: diag.isHttps,         val: diag.isHttps ? '✅ Yes' : '❌ No — needs HTTPS' },
+            { label: 'Camera API', ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? '✅ Supported' : '❌ Not supported' },
+            { label: 'Permission', ok: diag.permState === 'granted' ? true : diag.permState === 'denied' ? false : null,
+              val: diag.permState === 'granted' ? '✅ Granted' : diag.permState === 'denied' ? '❌ Denied' : '⚠️ ' + diag.permState },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, fontSize: '0.82rem' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#f59e0b' }} />
+              <span style={{ color: '#475569', width: 80, flexShrink: 0 }}>{row.label}</span>
+              <span style={{ color: row.ok === false ? '#fca5a5' : '#94a3b8', fontWeight: 600 }}>{row.val}</span>
+            </div>
+          ))}
+          {error && (
+            <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#f87171' }}>
+              ⛔ Error code: <strong>{error.fix}</strong>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Open camera button (idle or after error) */}
       {(step === 'idle' || step === 'error') && (
-        <button style={{ ...s.btn, background: '#3b82f6', color: '#fff', marginTop: 4 }} onClick={openCamera}>
+        <button style={{ ...s.btn, background: '#3b82f6', color: '#fff', marginTop: 8 }} onClick={openCamera}>
           📷 Open Camera
         </button>
       )}
 
       {/* Hidden canvas — single instance, always mounted */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-      {/* Diagnostics — always visible so we can see what's wrong */}
-      {diag && (
-        <div style={s.diag}>
-          <div style={{ color: '#475569', marginBottom: 4, fontWeight: 600 }}>Camera Diagnostics</div>
-          <div style={s.diagRow}>
-            <div style={s.dot(diag.isHttps)} />
-            <span>HTTPS: {diag.isHttps ? 'Yes (required ✓)' : 'No — camera requires HTTPS'}</span>
-          </div>
-          <div style={s.diagRow}>
-            <div style={s.dot(diag.hasMediaDevices)} />
-            <span>MediaDevices API: {diag.hasMediaDevices ? 'Supported ✓' : 'Not supported ✗'}</span>
-          </div>
-          <div style={s.diagRow}>
-            <div style={s.dot(permColor)} />
-            <span>Camera permission: {diag.permState}</span>
-          </div>
-          {error && (
-            <div style={{ ...s.diagRow, marginTop: 4 }}>
-              <div style={s.dot(false)} />
-              <span style={{ color: '#fca5a5' }}>Last error: {error.fix}</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

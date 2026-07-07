@@ -223,6 +223,34 @@ export default function QRScanner() {
       <div style={s.title}>📲 QR Attendance</div>
       <div style={s.sub}>Scan the shop QR code to check in or out. Multiple sessions supported.</div>
 
+      {/* ── Camera status card — always visible ── */}
+      <div style={{ background: '#1e293b', borderRadius: 12, padding: 14, border: '1px solid #334155', marginBottom: 14 }}>
+        <div style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem', marginBottom: 10, letterSpacing: '0.05em' }}>📋 CAMERA STATUS</div>
+        {diag ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { label: 'HTTPS (required)',  ok: diag.isHttps,         val: diag.isHttps ? '✅ Yes' : '❌ No — camera needs HTTPS' },
+              { label: 'Camera API',        ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? '✅ Supported' : '❌ Not supported — try Chrome or Safari' },
+              { label: 'Permission',        ok: diag.permState === 'granted' ? true : diag.permState === 'denied' ? false : null,
+                val: diag.permState === 'granted' ? '✅ Granted' : diag.permState === 'denied' ? '❌ Denied — check browser settings' : '⚠️ ' + diag.permState },
+              { label: 'Device / Browser',  ok: null,
+                val: `${diag.isIOS ? '🍎 iOS' : '🤖 Android/Other'} · ${diag.isSafari ? 'Safari' : 'Other browser'}${diag.isIOS && !diag.isSafari ? ' ⚠️ iOS needs Safari' : ''}` },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, marginTop: 3,
+                  background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#f59e0b' }} />
+                <div>
+                  <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{row.label}</div>
+                  <div style={{ color: row.ok === false ? '#fca5a5' : '#e2e8f0', fontWeight: 600 }}>{row.val}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: '#475569', fontSize: '0.85rem' }}>⏳ Checking device capabilities…</div>
+        )}
+      </div>
+
       <div style={s.card}>
         <div style={s.shopHours}>
           <div style={s.hourItem}>
@@ -326,25 +354,6 @@ export default function QRScanner() {
         </div>
       )}
 
-      {/* Diagnostics panel — always visible to help debug camera issues */}
-      {diag && (
-        <div style={{ marginTop: 16, background: '#0f172a', borderRadius: 8, padding: '10px 14px', border: '1px solid #1e293b', fontSize: '0.72rem', color: '#475569' }}>
-          <div style={{ color: '#334155', fontWeight: 700, marginBottom: 6 }}>📋 Camera Diagnostics</div>
-          {[
-            { label: 'HTTPS',           ok: diag.isHttps,         val: diag.isHttps ? 'Yes ✓' : '✗ Camera requires HTTPS' },
-            { label: 'MediaDevices API',ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? 'Supported ✓' : '✗ Not supported — try a different browser' },
-            { label: 'Permission',      ok: diag.permState === 'granted', val: diag.permState },
-            { label: 'iOS Device',      ok: null,                 val: diag.isIOS ? 'Yes — use Safari' : 'No' },
-            { label: 'Browser',         ok: null,                 val: diag.isSafari ? 'Safari' : diag.ua.split(' ').slice(-1)[0] },
-          ].map(row => (
-            <div key={row.label} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#334155' }} />
-              <span style={{ color: '#475569', width: 120, flexShrink: 0 }}>{row.label}:</span>
-              <span style={{ color: row.ok === false ? '#fca5a5' : '#64748b' }}>{row.val}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
