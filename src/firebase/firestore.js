@@ -129,6 +129,21 @@ export async function updateExpenseStatus(expenseId, status) {
   await updateDoc(doc(db, 'expenses', expenseId), { status })
 }
 
+// ── Users / Employee Management ──────────────────────────────────────────────
+
+export async function getAllEmployees() {
+  const snap = await getDocs(collection(db, 'users'))
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+}
+
+export async function updateUserRole(uid, role) {
+  await updateDoc(doc(db, 'users', uid), { role })
+}
+
+export async function updateUserStatus(uid, active) {
+  await updateDoc(doc(db, 'users', uid), { active })
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function todayStr() {

@@ -5,6 +5,7 @@ import QRGenerator from '../components/attendance/QRGenerator'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
 import Reports from '../components/dashboard/Reports'
 import AppConfig from '../components/config/AppConfig'
+import EmployeeManagement from '../components/employees/EmployeeManagement'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
 
 const s = {
@@ -30,6 +31,7 @@ const s = {
 
 const TILES = [
   { icon: '🔑', label: 'QR Codes', path: '/manager/qr', color: '#3b82f6' },
+  { icon: '👥', label: 'Employees', path: '/manager/employees', color: '#22c55e' },
   { icon: '🧾', label: 'Expenses', path: '/manager/expenses', color: '#ec4899' },
   { icon: '📊', label: 'Reports', path: '/manager/reports', color: '#f97316' },
   { icon: '⚙️', label: 'Config', path: '/manager/config', color: '#6366f1' },
@@ -133,6 +135,7 @@ export default function ManagerHome() {
         <Route path="qr" element={<QRGenerator />} />
         <Route path="expenses" element={<ExpenseRecorder />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="employees" element={<EmployeeManagement />} />
         <Route path="config" element={<AppConfig />} />
       </Routes>
     </div>
