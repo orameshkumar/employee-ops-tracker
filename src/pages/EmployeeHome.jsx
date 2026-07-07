@@ -21,7 +21,7 @@ const s = {
 }
 
 const TILES = [
-  { icon: '📲', label: 'QR Attendance', sub: 'Check in / Check out', path: '/employee', color: '#3b82f6' },
+  { icon: '📲', label: 'QR Attendance', sub: 'Check in / Check out', path: '/employee/qr', color: '#3b82f6' },
   { icon: '✅', label: 'Daily Tasks', sub: 'Routine checklist', path: '/employee/tasks', color: '#22c55e' },
   { icon: '🔒', label: 'Closure Tasks', sub: 'End of shift', path: '/employee/closure', color: '#a855f7' },
   { icon: '💰', label: 'Sales Entry', sub: 'Online + cash', path: '/employee/sales', color: '#f97316' },
@@ -54,6 +54,7 @@ export default function EmployeeHome() {
       <Navbar />
       <Routes>
         <Route index element={<Dashboard />} />
+        <Route path="qr" element={<QRScanner />} />
         <Route path="tasks" element={<DailyTasks />} />
         <Route path="closure" element={<ClosureTasks />} />
         <Route path="sales" element={<SalesEntry />} />
