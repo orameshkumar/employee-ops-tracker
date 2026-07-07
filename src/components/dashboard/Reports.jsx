@@ -32,6 +32,12 @@ const s = {
   noData: { color: '#475569', padding: '14px 18px', fontSize: '0.85rem' },
 }
 
+function fmtHours(h) {
+  const hrs = Math.floor(h)
+  const mins = Math.round((h - hrs) * 60)
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`
+}
+
 function firstDayOfMonth() {
   const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]
 }
@@ -201,10 +207,10 @@ export default function Reports() {
             <div style={s.sectionHead}>👥 Attendance &amp; Absence — Per Employee</div>
             <table style={s.table}>
               <thead><tr>
-                <th style={s.th}>Employee</th><th style={s.th}>Present</th><th style={s.th}>Absent</th><th style={s.th}>Attendance %</th><th style={s.th}>On Time</th><th style={s.th}>Avg Hours</th>
+                <th style={s.th}>Employee</th><th style={s.th}>Present</th><th style={s.th}>Absent</th><th style={s.th}>Attendance %</th><th style={s.th}>On Time</th><th style={s.th}>Total Hours</th><th style={s.th}>Avg Hours/Day</th>
               </tr></thead>
               <tbody>
-                {data.attendanceByEmployee.length === 0 && <tr><td colSpan={6} style={s.noData}>No attendance records in this range</td></tr>}
+                {data.attendanceByEmployee.length === 0 && <tr><td colSpan={7} style={s.noData}>No attendance records in this range</td></tr>}
                 {data.attendanceByEmployee.map(emp => (
                   <tr key={emp.name}>
                     <td style={s.td}>{emp.name}</td>
@@ -217,7 +223,8 @@ export default function Reports() {
                       </div>
                     </td>
                     <td style={s.td}>{emp.onTime}</td>
-                    <td style={s.td}>{emp.avgHours}h</td>
+                    <td style={{ ...s.td, color: '#38bdf8' }}>{emp.totalHours}</td>
+                    <td style={s.td}>{emp.avgHours}</td>
                   </tr>
                 ))}
               </tbody>
@@ -285,23 +292,37 @@ function buildReport(attendance, sales, expenses, from, to) {
     empMap[r.userName].records.push(r)
   })
   const attendanceByEmployee = Object.entries(empMap).map(([name, { records }]) => {
-    const present = records.length
+    // Count unique dates — multiple sessions on the same day = 1 day present
+    const presentDates = new Set(records.map(r => r.date))
+    const present = presentDates.size
     const absent = Math.max(0, totalDays - present)
     const pct = Math.round((present / totalDays) * 100)
-    const onTime = records.filter(r => {
-      if (!r.checkIn) return false
-      const t = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
-      return t.getHours() < 9 || (t.getHours() === 9 && t.getMinutes() <= 15)
-    }).length
-    const hoursArr = records
-      .filter(r => r.checkIn && r.checkOut)
-      .map(r => {
-        const i = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
-        const o = r.checkOut.toDate ? r.checkOut.toDate() : new Date(r.checkOut)
-        return (o - i) / 3600000
-      })
-    const avgHours = hoursArr.length ? (hoursArr.reduce((s, h) => s + h, 0) / hoursArr.length).toFixed(1) : '—'
-    return { name, present, absent, pct, onTime, avgHours }
+
+    // On-time: unique days where any check-in was before 09:15
+    const onTimeDates = new Set()
+    records.forEach(r => {
+      if (!r.checkIn) return
+      const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
+      if (ci.getHours() < 9 || (ci.getHours() === 9 && ci.getMinutes() <= 15)) {
+        onTimeDates.add(r.date)
+      }
+    })
+    const onTime = onTimeDates.size
+
+    // Hours: sum all completed sessions per day, then derive total + avg across days
+    const hoursByDate = {}
+    records.forEach(r => {
+      if (!r.checkIn || !r.checkOut) return
+      const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
+      const co = r.checkOut.toDate ? r.checkOut.toDate() : new Date(r.checkOut)
+      hoursByDate[r.date] = (hoursByDate[r.date] || 0) + (co - ci) / 3600000
+    })
+    const dailyHours = Object.values(hoursByDate)
+    const totalHoursNum = dailyHours.reduce((s, h) => s + h, 0)
+    const totalHours = totalHoursNum > 0 ? fmtHours(totalHoursNum) : '—'
+    const avgHours = dailyHours.length ? fmtHours(totalHoursNum / dailyHours.length) : '—'
+
+    return { name, present, absent, pct, onTime, totalHours, avgHours }
   }).sort((a, b) => b.present - a.present)
 
   return { totalDays, totalCheckIns: attendance.length, totalSales, totalOnline, totalCash, totalExpenses, salesByDate, expenseByCategory, attendanceByEmployee }
