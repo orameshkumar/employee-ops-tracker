@@ -20,7 +20,7 @@ function RootRedirect() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/employee-ops-tracker">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RootRedirect />} />
