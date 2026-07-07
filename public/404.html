@@ -4,16 +4,17 @@
     <meta charset="utf-8" />
     <title>Employee Ops Tracker</title>
     <script>
-      // GitHub Pages SPA redirect — encode the path into a query string and
-      // redirect to index.html, which decodes it back and pushes the route.
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 2).join('/') +
-        '/?p=/' + l.pathname.slice(1).split('/').slice(1).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // Store the intended path in sessionStorage, then redirect to index.html.
+      // Using sessionStorage (not replaceState) so the original URL stays in
+      // browser history — back/forward navigation works correctly.
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      // Strip the repo base (/employee-ops-tracker) from the path
+      var base = '/employee-ops-tracker';
+      var route = path.startsWith(base) ? path.slice(base.length) : path;
+      sessionStorage.setItem('spa_redirect', route + search + hash);
+      window.location.href = base + '/';
     </script>
   </head>
   <body></body>
