@@ -33,8 +33,9 @@ const s = {
   }),
   msg: (ok) => ({
     padding: '10px 14px', borderRadius: 8, marginTop: 12, fontSize: '0.85rem',
-    background: ok ? '#14532d' : '#450a0a', color: ok ? '#4ade80' : '#fca5a5',
-    border: `1px solid ${ok ? '#16a34a' : '#ef4444'}`,
+    background: ok === true ? '#14532d' : ok === false ? '#450a0a' : '#1e293b',
+    color:      ok === true ? '#4ade80' : ok === false ? '#fca5a5' : '#94a3b8',
+    border: `1px solid ${ok === true ? '#16a34a' : ok === false ? '#ef4444' : '#334155'}`,
   }),
   session: (open) => ({
     display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
@@ -91,57 +92,71 @@ export default function QRScanner() {
   async function requestCameraAndScan() {
     setMessage(null)
     setPermState('requesting')
+    setMessage({ ok: null, text: '⏳ Step 1/4: Checking camera support…' })
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMessage({ ok: false, text: '⛔ Camera API not supported. Use Chrome or Safari on your device.' })
-      setPermState('denied')
-      return
-    }
-
-    // If permission is already granted, go straight to scanner — opening a
-    // test stream then closing it causes a camera hardware release delay on
-    // iOS/Android, which makes html5-qrcode get a black feed.
-    const d = await collectDiag()
-    setDiag(d)
-    if (d.permState === 'granted') {
-      setPermState('granted')
-      await resolveCamera()
-      setScanning(true)
-      return
-    }
-
-    // Permission unknown or prompt — do a minimal test stream to trigger the
-    // native browser permission dialog, then release it.
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setMessage({ ok: false, text: '⛔ Camera API not supported.\n\nUse Chrome or Safari on this device.' })
+        setPermState('denied')
+        return
+      }
+
+      setMessage({ ok: null, text: '⏳ Step 2/4: Checking permission status…' })
+      const d = await collectDiag()
+      setDiag(d)
+
+      if (d.permState === 'granted') {
+        setMessage({ ok: null, text: '⏳ Step 3/4: Permission already granted — resolving camera…' })
+        setPermState('granted')
+        await resolveCamera()
+        setMessage({ ok: null, text: '⏳ Step 4/4: Starting scanner…' })
+        setScanning(true)
+        return
+      }
+
+      setMessage({ ok: null, text: '⏳ Step 3/4: Requesting camera permission — please tap Allow…' })
+      let stream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      } catch (err) {
+        const name = err?.name || ''
+        const iosHint = d.isIOS
+          ? '\n\niOS fix: Settings → Safari → Camera → Allow, then reload.'
+          : '\n\nFix: tap the 🔒 icon in the address bar → allow Camera → reload.'
+        setPermState('denied')
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          setMessage({ ok: false, text: `🚫 Camera permission denied. [${name}]${iosHint}` })
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          setMessage({ ok: false, text: `📷 No camera found on this device. [${name}]` })
+        } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+          setMessage({ ok: false, text: `📷 Camera is in use by another app. [${name}]\n\nClose other camera apps and try again.` })
+        } else {
+          setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown error'}` })
+        }
+        collectDiag().then(setDiag)
+        return
+      }
+
       stream.getTracks().forEach(t => t.stop())
       setPermState('granted')
+
+      setMessage({ ok: null, text: '⏳ Step 4/4: Resolving camera, starting scanner…' })
       await resolveCamera()
-      // Brief pause so camera hardware fully releases before html5-qrcode
-      // reopens it — prevents black screen on iOS.
+      // Brief pause so camera hardware fully releases before html5-qrcode reopens it.
       setTimeout(() => setScanning(true), 400)
-    } catch (err) {
-      setPermState('denied')
-      const name = err?.name || ''
-      const iosHint = d.isIOS
-        ? '\n\niOS fix: Settings → Safari → Camera → Allow, then reload the page.'
-        : '\n\nFix: tap the 🔒 icon in the address bar → allow Camera → reload.'
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        setMessage({ ok: false, text: `🚫 Camera permission denied. [${name}]${iosHint}` })
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        setMessage({ ok: false, text: `📷 No camera found on this device. [${name}]` })
-      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-        setMessage({ ok: false, text: `📷 Camera in use by another app. [${name}]\n\nClose it and try again.` })
-      } else {
-        setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown'}` })
-      }
-      collectDiag().then(setDiag)
+
+    } catch (outerErr) {
+      // Catch any unexpected error so the button never silently gets stuck
+      console.error('requestCameraAndScan unexpected error:', outerErr)
+      setPermState('idle')
+      setMessage({ ok: false, text: `Unexpected error: [${outerErr?.name || 'Error'}] ${outerErr?.message || String(outerErr)}` })
     }
   }
 
   // ── Start / stop camera using useEffect so #qr-reader is guaranteed in DOM ──
   useEffect(() => {
     if (!scanning) return
+    setMessage(null)  // clear "Step X/4" progress messages once scanner starts
 
     const { user, profile, settings, sessions } = stateRef.current
     const openSession = sessions.find(s => s.checkIn && !s.checkOut)
