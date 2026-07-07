@@ -1,8 +1,14 @@
 {
   "name": "Employee Ops Tracker",
   "short_name": "OpsTracker",
-  "start_url": "./",
+  "start_url": "/employee-ops-tracker/",
+  "scope": "/employee-ops-tracker/",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#3b82f6"
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/employee-ops-tracker/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/employee-ops-tracker/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/employee-ops-tracker/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

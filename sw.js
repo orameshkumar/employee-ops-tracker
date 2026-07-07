@@ -1,18 +1,1 @@
-const CACHE = 'ops-tracker-v1'
-
-self.addEventListener('install', e => {
-  self.skipWaiting()
-})
-
-self.addEventListener('activate', e => {
-  e.waitUntil(clients.claim())
-})
-
-self.addEventListener('fetch', e => {
-  // Skip non-http(s) requests (chrome-extension, data:, etc.)
-  if (!e.request.url.startsWith('http')) return
-  // Network-first: fall back to cache
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  )
-})
+if(!self.define){let e,i={};const r=(r,n)=>(r=new URL(r+".js",n).href,i[r]||new Promise(i=>{if("document"in self){const e=document.createElement("script");e.src=r,e.onload=i,document.head.appendChild(e)}else e=r,importScripts(r),i()}).then(()=>{let e=i[r];if(!e)throw new Error(`Module ${r} didn’t register its module`);return e}));self.define=(n,o)=>{const s=e||("document"in self?document.currentScript.src:"")||location.href;if(i[s])return;let t={};const c=e=>r(e,s),f={module:{uri:s},exports:t,require:c};i[s]=Promise.all(n.map(e=>f[e]||c(e))).then(e=>(o(...e),t))}}define(["./workbox-abeb32eb"],function(e){"use strict";self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"registerSW.js",revision:"b4a3902d419512fe6c59bbf94cdf8519"},{url:"index.html",revision:"38c0359aba6e413d8dfd2662815b5b38"},{url:"icon-512.png",revision:"43d1986ba2a446c39db49886b814b619"},{url:"icon-192.png",revision:"6464362392f9024377106f87e400b637"},{url:"favicon.ico",revision:"0399096898c32ff67294b866a141fe53"},{url:"404.html",revision:"54d10f254d1b50ac3d27208a31adb49c"},{url:"assets/index-Bx7rPXcK.js",revision:null},{url:"favicon.ico",revision:"0399096898c32ff67294b866a141fe53"},{url:"icon-192.png",revision:"6464362392f9024377106f87e400b637"},{url:"icon-512.png",revision:"43d1986ba2a446c39db49886b814b619"},{url:"manifest.webmanifest",revision:"f82f24cffef4db254b8ff09cec22eb98"}],{}),e.cleanupOutdatedCaches(),e.registerRoute(new e.NavigationRoute(e.createHandlerBoundToURL("/employee-ops-tracker/index.html"),{denylist:[/^\/employee-ops-tracker\/404/]})),e.registerRoute(/^https:\/\/.*\.firebaseio\.com\/.*/i,new e.NetworkOnly,"GET"),e.registerRoute(/^https:\/\/firestore\.googleapis\.com\/.*/i,new e.NetworkOnly,"GET")});
