@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: deep rose -->
+  <rect width="512" height="512" rx="110" fill="#831843"/>
+
+  <!-- Glass body (trapezoid) -->
+  <polygon points="156,128 356,128 326,420 186,420" fill="#fdf2f8" opacity="0.96"/>
+
+  <!-- Rosemilk liquid fill -->
+  <polygon points="162,224 350,224 326,420 186,420" fill="#f9a8d4"/>
+
+  <!-- Foam top on liquid -->
+  <ellipse cx="256" cy="224" rx="94" ry="18" fill="#fbcfe8"/>
+
+  <!-- Glass rim highlight -->
+  <rect x="148" y="114" width="216" height="26" rx="13" fill="#fce7f3" opacity="0.55"/>
+
+  <!-- Straw -->
+  <rect x="298" y="88" width="22" height="240" rx="11" fill="#f472b6"/>
+  <!-- straw shine -->
+  <rect x="302" y="96" width="6" height="220" rx="3" fill="#fda4af" opacity="0.55"/>
+
+  <!-- Glass left shine line -->
+  <line x1="198" y1="148" x2="186" y2="320" stroke="white" stroke-width="9" stroke-linecap="round" opacity="0.28"/>
+
+  <!-- Rose flower cluster (top-left of glass) -->
+  <!-- outer petals -->
+  <circle cx="182" cy="150" r="40" fill="#be123c"/>
+  <circle cx="160" cy="134" r="30" fill="#e11d48"/>
+  <circle cx="188" cy="124" r="26" fill="#f43f5e"/>
+  <circle cx="212" cy="138" r="24" fill="#e11d48"/>
+  <circle cx="196" cy="158" r="22" fill="#fb7185"/>
+  <!-- inner petals -->
+  <circle cx="178" cy="138" r="18" fill="#f43f5e"/>
+  <circle cx="196" cy="132" r="15" fill="#fb7185"/>
+  <!-- center -->
+  <circle cx="184" cy="146" r="10" fill="#fda4af"/>
+  <circle cx="184" cy="146" r="5" fill="#ffe4e6"/>
+
+  <!-- Leaves -->
+  <ellipse cx="148" cy="172" rx="22" ry="10" fill="#15803d" transform="rotate(-35 148 172)"/>
+  <ellipse cx="210" cy="176" rx="20" ry="9" fill="#16a34a" transform="rotate(25 210 176)"/>
+
+  <!-- Small decorative dots (rose petals fallen) -->
+  <circle cx="230" cy="390" r="6" fill="#f9a8d4" opacity="0.6"/>
+  <circle cx="262" cy="398" r="4" fill="#fbcfe8" opacity="0.5"/>
+  <circle cx="290" cy="385" r="5" fill="#f9a8d4" opacity="0.4"/>
+
+  <!-- Bottom label band -->
+  <polygon points="196,340 316,340 310,390 202,390" fill="#be185d" opacity="0.35"/>
+</svg>
