@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import DateInput from '../shared/DateInput'
 import { fmtDate, todayISO, daysAgoISO } from '../../utils/dateUtils'
+import TaskVerificationReport from '../reports/TaskVerificationReport'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
@@ -41,7 +42,16 @@ function dateRange(from, to) {
   return dates
 }
 
+const tabBtn = (active) => ({
+  padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
+  fontWeight: 700, fontSize: '0.85rem',
+  background: active ? '#f97316' : '#1e293b',
+  color: active ? '#fff' : '#64748b',
+  transition: 'background 0.15s',
+})
+
 export default function Reports() {
+  const [tab, setTab] = useState('reports')
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(todayISO())
   const [loading, setLoading] = useState(false)
@@ -71,8 +81,14 @@ export default function Reports() {
   return (
     <div style={s.wrap}>
       <div style={s.title}>📊 Reports</div>
-      <div style={s.sub}>Date-range filtered reports for attendance, sales, and expenses</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <button style={tabBtn(tab === 'reports')} onClick={() => setTab('reports')}>📊 Analytics</button>
+        <button style={tabBtn(tab === 'tasks')} onClick={() => setTab('tasks')}>✅ Task Report</button>
+      </div>
 
+      {tab === 'tasks' && <TaskVerificationReport />}
+
+      {tab === 'reports' && <div>
       <div style={s.filterBar}>
         <div style={s.field}>
           <label style={s.label}>From Date</label>
@@ -209,6 +225,7 @@ export default function Reports() {
           </div>
         </>
       )}
+      </div>}
     </div>
   )
 }

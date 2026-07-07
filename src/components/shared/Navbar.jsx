@@ -52,7 +52,6 @@ export default function Navbar() {
         {!isManager && lk(`${base}/sales`, 'Sales')}
         {lk(`${base}/expenses`, 'Expenses')}
         {isManager && lk(`${base}/reports`, 'Reports')}
-        {isManager && lk(`${base}/qr`, 'QR Codes')}
         {isManager && lk(`${base}/config`, '⚙ Config')}
       </div>
       <div style={s.right}>

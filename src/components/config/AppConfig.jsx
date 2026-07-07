@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
 import { useTheme, THEMES } from '../../contexts/ThemeContext'
+import QRGenerator from '../attendance/QRGenerator'
 
 const s = {
   wrap: { padding: 24, maxWidth: 660, margin: '0 auto' },
@@ -245,6 +246,14 @@ export default function AppConfig() {
           {saving ? 'Saving…' : '💾 Save All Settings'}
         </button>
       </form>
+
+      <div style={{ ...s.section, padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 20px', background: '#0f172a', borderBottom: '1px solid #334155' }}>
+          <div style={s.sectionTitle}>🔑 QR Codes</div>
+          <div style={{ color: '#64748b', fontSize: '0.8rem' }}>Generate and print shop QR codes for check-in / check-out</div>
+        </div>
+        <QRGenerator />
+      </div>
     </div>
   )
 }

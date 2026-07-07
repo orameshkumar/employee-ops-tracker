@@ -1,7 +1,6 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/shared/Navbar'
-import QRGenerator from '../components/attendance/QRGenerator'
 import ShopQRPrint from '../components/attendance/ShopQRPrint'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
 import Reports from '../components/dashboard/Reports'
@@ -9,7 +8,6 @@ import AppConfig from '../components/config/AppConfig'
 import EmployeeManagement from '../components/employees/EmployeeManagement'
 import HistoryPage from '../components/history/HistoryPage'
 import BackupRestore from '../components/backup/BackupRestore'
-import TaskVerificationReport from '../components/reports/TaskVerificationReport'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
 import { loadSettings } from '../hooks/useAppSettings'
 import { fmtDate } from '../utils/dateUtils'
@@ -40,14 +38,12 @@ const s = {
 }
 
 const TILES = [
-  { icon: '🔑', label: 'QR Codes', path: '/manager/qr', color: '#3b82f6' },
   { icon: '👥', label: 'Employees', path: '/manager/employees', color: '#22c55e' },
   { icon: '🧾', label: 'Expenses', path: '/manager/expenses', color: '#ec4899' },
   { icon: '📋', label: 'History', path: '/manager/history', color: '#06b6d4' },
   { icon: '📊', label: 'Reports', path: '/manager/reports', color: '#f97316' },
-  { icon: '🗄️', label: 'Backup',      path: '/manager/backup',      color: '#d97706' },
-  { icon: '✅', label: 'Task Report', path: '/manager/task-report', color: '#8b5cf6' },
-  { icon: '⚙️', label: 'Config',      path: '/manager/config',      color: '#6366f1' },
+  { icon: '🗄️', label: 'Backup', path: '/manager/backup', color: '#d97706' },
+  { icon: '⚙️', label: 'Config', path: '/manager/config', color: '#6366f1' },
 ]
 
 function Dashboard() {
@@ -189,14 +185,12 @@ export default function ManagerHome() {
       <Navbar />
       <Routes>
         <Route index element={<Dashboard />} />
-        <Route path="qr" element={<QRGenerator />} />
         <Route path="qr-print" element={<ShopQRPrint />} />
         <Route path="expenses" element={<ExpenseRecorder />} />
         <Route path="reports" element={<Reports />} />
         <Route path="employees" element={<EmployeeManagement />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="backup" element={<BackupRestore />} />
-        <Route path="task-report" element={<TaskVerificationReport />} />
         <Route path="config" element={<AppConfig />} />
       </Routes>
     </div>
