@@ -39,6 +39,33 @@ function fmtHours(h) {
   return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`
 }
 
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00')  // noon avoids DST edge cases
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+// For cross-midnight shops (shopEndMins < shopStartMins), a check-in that
+// falls before shopEndMins belongs to the PREVIOUS calendar day's shop day.
+// Example: shop 22:00–02:00, check-in at 01:30 on Jan 16 → shop day Jan 15.
+function effectiveShopDay(r, shopStartMins, shopEndMins) {
+  if (!r.checkIn) return r.date
+  const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
+  const ciMins = ci.getHours() * 60 + ci.getMinutes()
+  if (shopEndMins < shopStartMins && ciMins < shopEndMins) {
+    return addDays(r.date, -1)
+  }
+  return r.date
+}
+
+// True if the check-in time falls inside the shop's operating window.
+// Same-day shop  (09:00–21:00): ciMins must be in [start, end].
+// Cross-midnight (22:00–02:00): ciMins must be >= start OR <= end.
+function isWithinShopHours(ciMins, shopStartMins, shopEndMins) {
+  if (shopEndMins >= shopStartMins) return ciMins >= shopStartMins && ciMins <= shopEndMins
+  return ciMins >= shopStartMins || ciMins <= shopEndMins
+}
+
 function firstDayOfMonth() {
   const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]
 }
@@ -71,11 +98,18 @@ export default function Reports() {
     setLoading(true)
     setError(null)
     try {
-      const [attendance, sales, expenses, settings] = await Promise.all([
-        fetchCollection('attendance', from, to),
+      // Load settings first so we can extend the attendance query range for
+      // cross-midnight shops (early-morning records on to+1 belong to the to shop day).
+      const settings = await loadSettings()
+      const [sH, sM] = (settings.shopStartTime || '09:00').split(':').map(Number)
+      const [eH, eM] = (settings.shopEndTime   || '21:00').split(':').map(Number)
+      const crossesMidnight = (eH * 60 + eM) < (sH * 60 + sM)
+      const attendanceTo = crossesMidnight ? addDays(to, 1) : to
+
+      const [attendance, sales, expenses] = await Promise.all([
+        fetchCollection('attendance', from, attendanceTo),
         fetchCollection('sales', from, to),
         fetchExpensesInRange(from, to),
-        loadSettings(),
       ])
       setData(buildReport(attendance, sales, expenses, from, to, settings))
     } catch (err) {
@@ -300,39 +334,43 @@ function buildReport(attendance, sales, expenses, from, to, settings = DEFAULT_S
     empMap[r.userName].records.push(r)
   })
   const attendanceByEmployee = Object.entries(empMap).map(([name, { records }]) => {
-    // Count unique dates — multiple sessions on the same day = 1 day present.
-    // Only count dates where check-in fell within the shop's operating window.
+    // Present: unique shop days (cross-midnight aware, within shop hours only)
     const presentDates = new Set()
     records.forEach(r => {
       if (!r.checkIn) return
       const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
       const ciMins = ci.getHours() * 60 + ci.getMinutes()
-      if (ciMins <= shopEndMins) presentDates.add(r.date)
+      if (!isWithinShopHours(ciMins, shopStartMins, shopEndMins)) return
+      presentDates.add(effectiveShopDay(r, shopStartMins, shopEndMins))
     })
-    const present = presentDates.size
+    // Only count shop days that fall within the requested date range
+    const present = [...presentDates].filter(d => d >= from && d <= to).length
     const absent = Math.max(0, totalDays - present)
     const pct = Math.round((present / totalDays) * 100)
 
-    // On-time: unique days where the earliest check-in was within grace period of shop start
+    // On-time: shop days where check-in was within grace period of shop start
     const onTimeDates = new Set()
     records.forEach(r => {
       if (!r.checkIn) return
       const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
       const ciMins = ci.getHours() * 60 + ci.getMinutes()
-      if (ciMins <= shopStartMins + ON_TIME_GRACE) onTimeDates.add(r.date)
+      if (ciMins <= shopStartMins + ON_TIME_GRACE) {
+        onTimeDates.add(effectiveShopDay(r, shopStartMins, shopEndMins))
+      }
     })
-    const onTime = onTimeDates.size
+    const onTime = [...onTimeDates].filter(d => d >= from && d <= to).length
 
-    // Hours: sum all completed sessions per day, then derive total + avg across days.
-    // Only include sessions where check-in is within shop hours.
+    // Hours: sum completed sessions per effective shop day, then total + avg
     const hoursByDate = {}
     records.forEach(r => {
       if (!r.checkIn || !r.checkOut) return
       const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
       const co = r.checkOut.toDate ? r.checkOut.toDate() : new Date(r.checkOut)
       const ciMins = ci.getHours() * 60 + ci.getMinutes()
-      if (ciMins > shopEndMins) return  // ignore sessions starting after shop close
-      hoursByDate[r.date] = (hoursByDate[r.date] || 0) + (co - ci) / 3600000
+      if (!isWithinShopHours(ciMins, shopStartMins, shopEndMins)) return
+      const shopDay = effectiveShopDay(r, shopStartMins, shopEndMins)
+      if (shopDay < from || shopDay > to) return
+      hoursByDate[shopDay] = (hoursByDate[shopDay] || 0) + (co - ci) / 3600000
     })
     const dailyHours = Object.values(hoursByDate)
     const totalHoursNum = dailyHours.reduce((s, h) => s + h, 0)
