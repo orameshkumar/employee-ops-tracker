@@ -5,6 +5,7 @@ import DailyTasks from '../components/tasks/DailyTasks'
 import ClosureTasks from '../components/tasks/ClosureTasks'
 import SalesEntry from '../components/sales/SalesEntry'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
+import HistoryPage from '../components/history/HistoryPage'
 import { useAuth } from '../contexts/AuthContext'
 
 const s = {
@@ -25,6 +26,7 @@ const TILES = [
   { icon: '🔒', label: 'Closure Tasks', sub: 'End of shift', path: '/employee/closure', color: '#a855f7' },
   { icon: '💰', label: 'Sales Entry', sub: 'Online + cash', path: '/employee/sales', color: '#f97316' },
   { icon: '🧾', label: 'Expenses', sub: 'Submit claims', path: '/employee/expenses', color: '#ec4899' },
+  { icon: '📋', label: 'History', sub: 'Sales & expenses', path: '/employee/history', color: '#06b6d4' },
 ]
 
 function Dashboard() {
@@ -56,6 +58,7 @@ export default function EmployeeHome() {
         <Route path="closure" element={<ClosureTasks />} />
         <Route path="sales" element={<SalesEntry />} />
         <Route path="expenses" element={<ExpenseRecorder />} />
+        <Route path="history" element={<HistoryPage />} />
       </Routes>
     </div>
   )

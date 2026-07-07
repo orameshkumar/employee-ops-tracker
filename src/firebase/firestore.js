@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, setDoc, getDoc, getDocs,
-  query, where, updateDoc, serverTimestamp,
+  query, where, updateDoc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -147,6 +147,48 @@ export async function getAllExpenses() {
 
 export async function updateExpenseStatus(expenseId, status) {
   await updateDoc(doc(db, 'expenses', expenseId), { status })
+}
+
+// ── Sales History ────────────────────────────────────────────────────────────
+
+export async function getSalesHistory(uid, isManager, startDate, endDate) {
+  const snap = await getDocs(collection(db, 'sales'))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(r => {
+      const inRange = (!startDate || r.date >= startDate) && (!endDate || r.date <= endDate)
+      return isManager ? inRange : inRange && r.uid === uid
+    })
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export async function updateSalesRecord(id, data) {
+  await updateDoc(doc(db, 'sales', id), { ...data, updatedAt: serverTimestamp() })
+}
+
+export async function deleteSalesRecord(id) {
+  await deleteDoc(doc(db, 'sales', id))
+}
+
+// ── Expense History ───────────────────────────────────────────────────────────
+
+export async function getExpensesHistory(uid, isManager, startDate, endDate) {
+  const snap = await getDocs(collection(db, 'expenses'))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(r => {
+      const inRange = (!startDate || r.date >= startDate) && (!endDate || r.date <= endDate)
+      return isManager ? inRange : inRange && r.uid === uid
+    })
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export async function updateExpenseRecord(id, data) {
+  await updateDoc(doc(db, 'expenses', id), { ...data, updatedAt: serverTimestamp() })
+}
+
+export async function deleteExpenseRecord(id) {
+  await deleteDoc(doc(db, 'expenses', id))
 }
 
 // ── Users / Employee Management ──────────────────────────────────────────────
