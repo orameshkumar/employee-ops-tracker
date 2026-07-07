@@ -6,17 +6,13 @@ import {
 } from '../../firebase/firestore'
 import { uploadPhoto, expensePhotoPath } from '../../firebase/storage'
 import PhotoCapture from '../shared/PhotoCapture'
+import DateInput from '../shared/DateInput'
+import { fmtDate, todayISO, daysAgoISO } from '../../utils/dateUtils'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 const ONLINE_METHODS = ['UPI / QR Pay', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet']
 const STATUS_COLOR = { pending: '#fbbf24', approved: '#4ade80', rejected: '#f87171' }
 const STATUS_BG = { pending: '#3b2a00', approved: '#14532d', rejected: '#450a0a' }
-
-function today() { return new Date().toISOString().split('T')[0] }
-function daysAgo(n) {
-  const d = new Date(); d.setDate(d.getDate() - n)
-  return d.toISOString().split('T')[0]
-}
 
 const s = {
   wrap: { padding: 24, maxWidth: 780, margin: '0 auto' },
@@ -29,7 +25,7 @@ const s = {
   filterLabel: { color: '#64748b', fontSize: '0.72rem' },
   input: { padding: '7px 10px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none' },
   quickBtns: { display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' },
-  quickBtn: (a) => ({ padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: a ? '#3b82f6' : '#0f172a', color: a ? '#fff' : '#64748b', border: '1px solid #334155' }),
+  quickBtn: (a) => ({ padding: '6px 12px', borderRadius: 6, border: '1px solid #334155', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: a ? '#3b82f6' : '#0f172a', color: a ? '#fff' : '#64748b' }),
   summary: { display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' },
   summaryCard: (c) => ({ background: '#1e293b', border: `1px solid ${c}`, borderRadius: 8, padding: '10px 16px', minWidth: 120 }),
   summaryVal: { color: '#e2e8f0', fontWeight: 800, fontSize: '1.1rem' },
@@ -46,7 +42,6 @@ const s = {
   delBtn: { padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: '#450a0a', color: '#fca5a5' },
   thumb: { width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #334155' },
   empty: { color: '#475569', padding: '24px 0', textAlign: 'center', fontSize: '0.85rem' },
-  // Modal
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
   modal: { background: '#1e293b', borderRadius: 14, padding: 24, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', border: '1px solid #334155' },
   modalTitle: { color: '#e2e8f0', fontWeight: 700, fontSize: '1rem', marginBottom: 18 },
@@ -66,8 +61,8 @@ export default function HistoryPage() {
   const isManager = profile?.role === 'manager'
 
   const [tab, setTab] = useState('sales')
-  const [fromDate, setFromDate] = useState(daysAgo(30))
-  const [toDate, setToDate] = useState(today())
+  const [fromDate, setFromDate] = useState(daysAgoISO(30))
+  const [toDate, setToDate] = useState(todayISO())
   const [quickRange, setQuickRange] = useState('30d')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
@@ -78,8 +73,8 @@ export default function HistoryPage() {
 
   function applyQuick(key) {
     setQuickRange(key)
-    const to = today()
-    const from = key === '7d' ? daysAgo(7) : key === '30d' ? daysAgo(30) : key === '90d' ? daysAgo(90) : daysAgo(365)
+    const to = todayISO()
+    const from = key === '7d' ? daysAgoISO(7) : key === '30d' ? daysAgoISO(30) : key === '90d' ? daysAgoISO(90) : daysAgoISO(365)
     setFromDate(from); setToDate(to)
   }
 
@@ -96,13 +91,11 @@ export default function HistoryPage() {
 
   useEffect(() => { load() }, [tab, fromDate, toDate])
 
-  // ── Summary totals ──────────────────────────────────────────────────────────
   const salesTotal = tab === 'sales' ? records.reduce((s, r) => s + (r.grandTotal || 0), 0) : 0
   const salesOnline = tab === 'sales' ? records.reduce((s, r) => s + (r.onlineTotal || 0), 0) : 0
   const salesCash = tab === 'sales' ? records.reduce((s, r) => s + (r.cashSales || 0), 0) : 0
   const expTotal = tab === 'expenses' ? records.reduce((s, r) => s + (r.amount || 0), 0) : 0
 
-  // ── Delete ──────────────────────────────────────────────────────────────────
   async function confirmDelete() {
     if (!deletingRecord) return
     setSaving(true)
@@ -130,11 +123,11 @@ export default function HistoryPage() {
       <div style={s.filterBar}>
         <div style={s.filterField}>
           <span style={s.filterLabel}>From</span>
-          <input style={s.input} type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setQuickRange('') }} />
+          <DateInput style={s.input} value={fromDate} onChange={e => { setFromDate(e.target.value); setQuickRange('') }} />
         </div>
         <div style={s.filterField}>
           <span style={s.filterLabel}>To</span>
-          <input style={s.input} type="date" value={toDate} onChange={e => { setToDate(e.target.value); setQuickRange('') }} />
+          <DateInput style={s.input} value={toDate} onChange={e => { setToDate(e.target.value); setQuickRange('') }} />
         </div>
         <div style={s.quickBtns}>
           {[['7d','7 Days'],['30d','30 Days'],['90d','90 Days'],['1y','1 Year']].map(([k,l]) => (
@@ -191,7 +184,6 @@ export default function HistoryPage() {
         ))}
       </div>
 
-      {/* Edit modal */}
       {editingRecord && tab === 'sales' && (
         <SalesEditModal
           record={editingRecord}
@@ -208,7 +200,6 @@ export default function HistoryPage() {
         />
       )}
 
-      {/* Delete confirm modal */}
       {deletingRecord && (
         <div style={s.overlay} onClick={() => setDeletingRecord(null)}>
           <div style={{ ...s.modal, maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -217,7 +208,7 @@ export default function HistoryPage() {
                 Delete this {tab === 'sales' ? 'sales record' : 'expense'}?<br />
                 <strong style={{ color: '#e2e8f0' }}>
                   {tab === 'sales'
-                    ? `₹${(deletingRecord.grandTotal || 0).toFixed(2)} on ${deletingRecord.date}`
+                    ? `₹${(deletingRecord.grandTotal || 0).toFixed(2)} on ${fmtDate(deletingRecord.date)}`
                     : `${deletingRecord.description} — ₹${(deletingRecord.amount || 0).toFixed(2)}`}
                 </strong><br />
                 <span style={{ fontSize: '0.78rem' }}>This cannot be undone.</span>
@@ -245,7 +236,7 @@ function SalesCard({ record: r, isManager, onEdit, onDelete }) {
       <div style={s.cardTop}>
         <div style={{ flex: 1 }}>
           <div style={s.cardTitle}>
-            📅 {r.date}{isManager && r.userName ? <span style={{ color: '#64748b', fontWeight: 400 }}> · {r.userName}</span> : ''}
+            📅 {fmtDate(r.date)}{isManager && r.userName ? <span style={{ color: '#64748b', fontWeight: 400 }}> · {r.userName}</span> : ''}
           </div>
           <div style={s.cardMeta}>
             Online ₹{(r.onlineTotal || 0).toFixed(2)} · Cash ₹{(r.cashSales || 0).toFixed(2)}
@@ -285,7 +276,7 @@ function ExpenseCard({ record: r, isManager, onEdit, onDelete }) {
         <div style={{ flex: 1 }}>
           <div style={s.cardTitle}>{r.description}</div>
           <div style={s.cardMeta}>
-            {r.category} · {r.date}{isManager && r.userName ? ` · ${r.userName}` : ''}
+            {r.category} · {fmtDate(r.date)}{isManager && r.userName ? ` · ${r.userName}` : ''}
             {r.notes && ` · ${r.notes}`}
           </div>
           <div style={{ marginTop: 6 }}>
@@ -336,7 +327,7 @@ function SalesEditModal({ record, onClose, onSaved }) {
         <div style={s.modalTitle}>✏ Edit Sales Record</div>
         <div style={s.field}>
           <label style={s.fieldLabel}>Date</label>
-          <input style={s.fieldInput} type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <DateInput style={s.fieldInput} value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <div style={{ ...s.field }}>
           <label style={s.fieldLabel}>Online Sales</label>
@@ -413,7 +404,7 @@ function ExpenseEditModal({ record, user, onClose, onSaved }) {
           </div>
           <div style={s.field}>
             <label style={s.fieldLabel}>Date</label>
-            <input style={s.fieldInput} type="date" value={form.date} onChange={e => set('date', e.target.value)} />
+            <DateInput style={s.fieldInput} value={form.date} onChange={e => set('date', e.target.value)} />
           </div>
         </div>
         <div style={s.row2}>
@@ -451,4 +442,3 @@ function ExpenseEditModal({ record, user, onClose, onSaved }) {
     </div>
   )
 }
-

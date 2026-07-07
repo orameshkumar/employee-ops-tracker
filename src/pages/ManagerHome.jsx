@@ -11,6 +11,7 @@ import HistoryPage from '../components/history/HistoryPage'
 import BackupRestore from '../components/backup/BackupRestore'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
 import { loadSettings } from '../hooks/useAppSettings'
+import { fmtDate } from '../utils/dateUtils'
 
 const s = {
   page: { minHeight: '100vh', background: 'var(--app-bg, #0f172a)' },
@@ -96,7 +97,7 @@ function Dashboard() {
             <div style={s.reminderSub}>
               {backupWarning.days === null
                 ? 'You have never backed up your data.'
-                : `Last backup was ${backupWarning.days} day${backupWarning.days !== 1 ? 's' : ''} ago (${backupWarning.last}).`}
+                : `Last backup was ${backupWarning.days} day${backupWarning.days !== 1 ? 's' : ''} ago (${fmtDate(backupWarning.last)}).`}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

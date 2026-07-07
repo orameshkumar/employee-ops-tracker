@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
+import DateInput from '../shared/DateInput'
+import { fmtDate, todayISO, daysAgoISO } from '../../utils/dateUtils'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
@@ -32,7 +34,7 @@ const s = {
 function firstDayOfMonth() {
   const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]
 }
-function today() { return new Date().toISOString().split('T')[0] }
+
 function dateRange(from, to) {
   const dates = []; const cur = new Date(from)
   while (cur <= new Date(to)) { dates.push(cur.toISOString().split('T')[0]); cur.setDate(cur.getDate() + 1) }
@@ -41,7 +43,7 @@ function dateRange(from, to) {
 
 export default function Reports() {
   const [from, setFrom] = useState(firstDayOfMonth())
-  const [to, setTo] = useState(today())
+  const [to, setTo] = useState(todayISO())
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
@@ -74,11 +76,11 @@ export default function Reports() {
       <div style={s.filterBar}>
         <div style={s.field}>
           <label style={s.label}>From Date</label>
-          <input style={s.input} type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          <DateInput style={s.input} value={from} onChange={e => setFrom(e.target.value)} />
         </div>
         <div style={s.field}>
           <label style={s.label}>To Date</label>
-          <input style={s.input} type="date" value={to} onChange={e => setTo(e.target.value)} />
+          <DateInput style={s.input} value={to} onChange={e => setTo(e.target.value)} />
         </div>
         <button style={s.btn} onClick={fetchData} disabled={loading}>
           {loading ? 'Loading…' : '🔍 Run Report'}
@@ -110,7 +112,7 @@ export default function Reports() {
                 {data.salesByDate.length === 0 && <tr><td colSpan={5} style={s.noData}>No sales in this range</td></tr>}
                 {data.salesByDate.map(row => (
                   <tr key={row.date}>
-                    <td style={s.td}>{row.date}</td>
+                    <td style={s.td}>{fmtDate(row.date)}</td>
                     <td style={{ ...s.td, color: '#4ade80' }}>₹{row.online.toFixed(2)}</td>
                     <td style={{ ...s.td, color: '#fbbf24' }}>₹{row.cash.toFixed(2)}</td>
                     <td style={{ ...s.td, fontWeight: 700 }}>₹{row.total.toFixed(2)}</td>
@@ -180,7 +182,7 @@ export default function Reports() {
 
           {/* Attendance per employee */}
           <div style={s.section}>
-            <div style={s.sectionHead}>👥 Attendance & Absence — Per Employee</div>
+            <div style={s.sectionHead}>👥 Attendance &amp; Absence — Per Employee</div>
             <table style={s.table}>
               <thead><tr>
                 <th style={s.th}>Employee</th><th style={s.th}>Present</th><th style={s.th}>Absent</th><th style={s.th}>Attendance %</th><th style={s.th}>On Time</th><th style={s.th}>Avg Hours</th>
@@ -220,7 +222,6 @@ async function fetchCollection(col, from, to) {
 }
 
 async function fetchExpensesInRange(from, to) {
-  // Fetch all expenses and filter client-side to avoid composite index requirement
   const snap = await getDocs(collection(db, 'expenses'))
   return snap.docs
     .map(d => ({ id: d.id, ...d.data() }))

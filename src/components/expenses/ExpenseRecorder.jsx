@@ -3,6 +3,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { saveExpense, getMyExpenses, getAllExpenses, updateExpenseStatus } from '../../firebase/firestore'
 import { uploadPhoto, expensePhotoPath } from '../../firebase/storage'
 import PhotoCapture from '../shared/PhotoCapture'
+import DateInput from '../shared/DateInput'
+import { fmtDate, todayISO } from '../../utils/dateUtils'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
@@ -39,7 +41,7 @@ export default function ExpenseRecorder() {
   const isManager = profile?.role === 'manager'
   const [tab, setTab] = useState('submit')
   const [expenses, setExpenses] = useState([])
-  const [form, setForm] = useState({ description: '', amount: '', category: 'Travel', date: today(), notes: '' })
+  const [form, setForm] = useState({ description: '', amount: '', category: 'Travel', date: todayISO(), notes: '' })
   const [photo, setPhoto] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -60,7 +62,7 @@ export default function ExpenseRecorder() {
       let receiptUrl = null
       if (photo) receiptUrl = await uploadPhoto(expensePhotoPath(user.uid), photo)
       await saveExpense(user.uid, profile?.name || user.email, { ...form, amount: parseFloat(form.amount), receiptUrl })
-      setForm({ description: '', amount: '', category: 'Travel', date: today(), notes: '' })
+      setForm({ description: '', amount: '', category: 'Travel', date: todayISO(), notes: '' })
       setPhoto(null)
       if (tab === 'submit') await loadExpenses()
     } catch (err) {
@@ -115,7 +117,7 @@ export default function ExpenseRecorder() {
               </div>
               <div style={s.field}>
                 <label style={s.label}>Date</label>
-                <input style={s.input} type="date" value={form.date} onChange={e => setField('date', e.target.value)} />
+                <DateInput style={s.input} value={form.date} onChange={e => setField('date', e.target.value)} />
               </div>
             </div>
             <div style={s.field}>
@@ -135,7 +137,7 @@ export default function ExpenseRecorder() {
             <div key={exp.id} style={s.card}>
               <div style={{ flex: 1 }}>
                 <div style={s.expName}>{exp.description}</div>
-                <div style={s.expMeta}>{exp.category} · {exp.date}{(isManager && tab === 'approve') ? ` · ${exp.userName}` : ''}</div>
+                <div style={s.expMeta}>{exp.category} · {fmtDate(exp.date)}{(isManager && tab === 'approve') ? ` · ${exp.userName}` : ''}</div>
                 {exp.notes && <div style={{ ...s.expMeta, marginTop: 2 }}>{exp.notes}</div>}
                 <div style={{ marginTop: 6 }}>
                   <span style={s.badge(exp.status)}>{exp.status?.toUpperCase()}</span>
@@ -159,6 +161,3 @@ export default function ExpenseRecorder() {
   )
 }
 
-function today() {
-  return new Date().toISOString().split('T')[0]
-}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { loadSettings, saveSettings } from '../../hooks/useAppSettings'
+import { fmtDate } from '../../utils/dateUtils'
 
 const EXPORT_COLLECTIONS = ['attendance', 'sales', 'expenses', 'dailyTasks', 'closureTasks', 'users']
 
@@ -148,7 +149,7 @@ export default function BackupRestore() {
       if (backup.settings) {
         await saveSettings(backup.settings)
       }
-      setMsg({ ok: true, text: `✅ Restore complete! ${count} documents restored from ${backup.exportedAt?.split('T')[0] || 'backup'}.` })
+      setMsg({ ok: true, text: `✅ Restore complete! ${count} documents restored from ${fmtDate(backup.exportedAt?.split('T')[0]) || 'backup'}.` })
     } catch (err) {
       setMsg({ ok: false, text: '❌ Restore failed: ' + err.message })
     } finally {
@@ -179,7 +180,7 @@ export default function BackupRestore() {
         <div style={{ marginBottom: 6 }}>
           <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>Last backup: </span>
           {lastBackup
-            ? <span style={s.lastBackup(isOverdue)}>{lastBackup} ({daysSinceBackup === 0 ? 'today' : `${daysSinceBackup}d ago`})</span>
+            ? <span style={s.lastBackup(isOverdue)}>{fmtDate(lastBackup)} ({daysSinceBackup === 0 ? 'today' : `${daysSinceBackup}d ago`})</span>
             : <span style={{ color: '#ef4444', fontSize: '0.82rem', fontWeight: 600 }}>Never backed up</span>
           }
         </div>
