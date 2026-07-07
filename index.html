@@ -7,21 +7,14 @@
     <link rel="manifest" href="/employee-ops-tracker/manifest.json" />
     <title>Employee Ops Tracker</title>
     <script>
-      // Decode the redirect from 404.html and restore the route
+      // Restore route saved by 404.html — runs before React mounts
       (function() {
-        var redirect = sessionStorage.redirect;
-        delete sessionStorage.redirect;
-        if (redirect && redirect !== location.href) {
-          history.replaceState(null, null, redirect);
-        }
-        // Also handle ?p= query param from 404.html
-        var search = location.search;
-        if (search && search.indexOf('?p=') !== -1) {
-          var path = search.slice(1).split('&').reduce(function(p, s) {
-            var r = s.split('=');
-            return r[0] === 'p' ? decodeURIComponent(r[1].replace(/~and~/g, '&')) : p;
-          }, null);
-          if (path) history.replaceState(null, null, '/employee-ops-tracker' + path);
+        var route = sessionStorage.getItem('spa_redirect');
+        if (route) {
+          sessionStorage.removeItem('spa_redirect');
+          // Use pushState so the restored route is a real history entry
+          // — back button goes to the previous external page, not a 404
+          window.history.pushState(null, null, '/employee-ops-tracker' + route);
         }
       })();
     </script>
