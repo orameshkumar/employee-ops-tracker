@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loginWithEmail, loginWithGoogle } from '../../firebase/auth'
 import { useAuth } from '../../contexts/AuthContext'
@@ -26,9 +26,11 @@ export default function Login() {
   const navigate = useNavigate()
   const { profile } = useAuth()
 
-  if (profile) {
-    navigate(profile.role === 'manager' ? '/manager' : '/employee')
-  }
+  useEffect(() => {
+    if (profile) {
+      navigate(profile.role === 'manager' ? '/manager' : '/employee', { replace: true })
+    }
+  }, [profile, navigate])
 
   async function handleEmail(e) {
     e.preventDefault()

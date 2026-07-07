@@ -11,7 +11,7 @@ const s = {
   status: { fontSize: '0.9rem', color: '#94a3b8', marginBottom: 12 },
   badge: (c) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: c === 'in' ? '#14532d' : c === 'out' ? '#1e3a5f' : '#3b2a00', color: c === 'in' ? '#4ade80' : c === 'out' ? '#60a5fa' : '#fbbf24' }),
   scanBox: { width: '100%', borderRadius: 8, overflow: 'hidden', marginBottom: 12 },
-  btn: (c) => ({ padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: c === 'green' ? '#16a34a' : '#3b82f6', color: '#fff', marginRight: 8 }),
+  btn: (c) => ({ padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: c === 'green' ? '#16a34a' : c === 'gray' ? '#64748b' : '#3b82f6', color: '#fff', marginRight: 8 }),
   msg: (ok) => ({ padding: '10px 14px', borderRadius: 8, marginTop: 12, fontSize: '0.85rem', background: ok ? '#14532d' : '#450a0a', color: ok ? '#4ade80' : '#fca5a5', border: `1px solid ${ok ? '#16a34a' : '#ef4444'}` }),
   timeRow: { display: 'flex', gap: 20, marginTop: 8 },
   timeItem: { fontSize: '0.8rem', color: '#64748b' },
@@ -24,29 +24,39 @@ export default function QRScanner() {
   const [scanning, setScanning] = useState(false)
   const [scanMode, setScanMode] = useState(null)
   const [message, setMessage] = useState(null)
-  const scannerRef = useRef(null)
-  const html5QrRef = useRef(null)
+  const scannerInstanceRef = useRef(null)
 
   useEffect(() => {
-    getTodayAttendance(user.uid).then(setAttendance)
+    getTodayAttendance(user.uid).then(setAttendance).catch(console.error)
   }, [user.uid])
 
   async function startScan(mode) {
     setScanMode(mode)
     setScanning(true)
     setMessage(null)
+
     setTimeout(() => {
-      html5QrRef.current = new Html5Qrcode('qr-reader')
-      html5QrRef.current.start(
+      const scanner = new Html5Qrcode('qr-reader')
+      scannerInstanceRef.current = scanner
+      scanner.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: 220 },
         async (decodedText) => {
-          await html5QrRef.current.stop()
+          try {
+            await scanner.stop()
+          } catch (e) {
+            console.error('Scanner stop error:', e)
+          }
+          scannerInstanceRef.current = null
           setScanning(false)
           await handleScan(decodedText, mode)
         },
         () => {}
-      ).catch(() => setScanning(false))
+      ).catch(err => {
+        console.error('Scanner start error:', err)
+        setScanning(false)
+        setMessage({ ok: false, text: 'Could not access camera. Please check permissions.' })
+      })
     }, 300)
   }
 
@@ -71,8 +81,15 @@ export default function QRScanner() {
     }
   }
 
-  function stopScan() {
-    html5QrRef.current?.stop().catch(() => {})
+  async function stopScan() {
+    if (scannerInstanceRef.current) {
+      try {
+        await scannerInstanceRef.current.stop()
+      } catch (e) {
+        console.error('Scanner stop error:', e)
+      }
+      scannerInstanceRef.current = null
+    }
     setScanning(false)
   }
 
@@ -85,30 +102,23 @@ export default function QRScanner() {
 
       <div style={s.card}>
         <div style={s.status}>
-          Today's Status: <span style={s.badge(status)}>
+          Today's Status:{' '}
+          <span style={s.badge(status)}>
             {status === 'none' ? 'Not Checked In' : status === 'in' ? 'Checked In' : 'Checked Out'}
           </span>
         </div>
         {attendance && (
           <div style={s.timeRow}>
-            {attendance.checkIn && (
-              <div style={s.timeItem}>Check In <div style={s.timeVal}>{fmtTime(attendance.checkIn)}</div></div>
-            )}
-            {attendance.checkOut && (
-              <div style={s.timeItem}>Check Out <div style={s.timeVal}>{fmtTime(attendance.checkOut)}</div></div>
-            )}
+            {attendance.checkIn && <div style={s.timeItem}>Check In <div style={s.timeVal}>{fmtTime(attendance.checkIn)}</div></div>}
+            {attendance.checkOut && <div style={s.timeItem}>Check Out <div style={s.timeVal}>{fmtTime(attendance.checkOut)}</div></div>}
           </div>
         )}
       </div>
 
       {!scanning && (
         <div style={{ display: 'flex', gap: 10 }}>
-          {status === 'none' && (
-            <button style={s.btn('green')} onClick={() => startScan('in')}>📷 Scan Check-In</button>
-          )}
-          {status === 'in' && (
-            <button style={s.btn('blue')} onClick={() => startScan('out')}>📷 Scan Check-Out</button>
-          )}
+          {status === 'none' && <button style={s.btn('green')} onClick={() => startScan('in')}>📷 Scan Check-In</button>}
+          {status === 'in' && <button style={s.btn('blue')} onClick={() => startScan('out')}>📷 Scan Check-Out</button>}
         </div>
       )}
 
@@ -117,8 +127,8 @@ export default function QRScanner() {
           <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: 8 }}>
             📸 Scanning for {scanMode === 'in' ? 'Check-In' : 'Check-Out'}…
           </div>
-          <div id="qr-reader" ref={scannerRef} style={s.scanBox} />
-          <button style={{ ...s.btn('blue'), background: '#64748b', marginTop: 8 }} onClick={stopScan}>Cancel</button>
+          <div id="qr-reader" style={s.scanBox} />
+          <button style={{ ...s.btn('gray'), marginTop: 8 }} onClick={stopScan}>Cancel</button>
         </div>
       )}
 

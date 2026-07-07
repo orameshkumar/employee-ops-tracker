@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { saveClosureTask, getTodayClosureTasks, markClosureComplete } from '../../firebase/firestore'
 import { uploadPhoto, taskPhotoPath } from '../../firebase/storage'
@@ -35,10 +35,10 @@ export default function ClosureTasks() {
   const [saved, setSaved] = useState([])
   const [photoMap, setPhotoMap] = useState({})
   const [saving, setSaving] = useState({})
-  const [closureDone, setClosureDone] = useState(false)
+  const markedComplete = useRef(false)
 
   useEffect(() => {
-    getTodayClosureTasks(user.uid).then(setSaved)
+    getTodayClosureTasks(user.uid).then(setSaved).catch(console.error)
   }, [user.uid])
 
   const savedNames = saved.map(t => t.taskName)
@@ -46,12 +46,14 @@ export default function ClosureTasks() {
   const pct = Math.round((savedNames.length / CLOSURE_TASKS.length) * 100)
 
   useEffect(() => {
-    if (allDone && !closureDone) {
-      markClosureComplete(user.uid)
-        .then(() => setClosureDone(true))
-        .catch(() => {})
+    if (allDone && !markedComplete.current) {
+      markedComplete.current = true
+      markClosureComplete(user.uid).catch(err => {
+        console.error('markClosureComplete failed:', err)
+        markedComplete.current = false
+      })
     }
-  }, [allDone])
+  }, [allDone, user.uid])
 
   function handlePhoto(taskName, dataUrl) {
     setPhotoMap(prev => ({ ...prev, [taskName]: dataUrl }))
@@ -79,18 +81,15 @@ export default function ClosureTasks() {
       <div style={s.title}>🔒 Closure Tasks</div>
       <div style={s.sub}>Complete ALL tasks before you can scan out for the day</div>
 
-      <div style={s.progress}>
-        <div style={s.bar(pct)} />
-      </div>
+      <div style={s.progress}><div style={s.bar(pct)} /></div>
       <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: 16 }}>
         {savedNames.length} / {CLOSURE_TASKS.length} completed ({pct}%)
       </div>
 
-      {allDone ? (
-        <div style={s.unlocked}>🔓 All closure tasks complete — QR Sign-Out is now unlocked!</div>
-      ) : (
-        <div style={s.locked}>🔒 Complete all {CLOSURE_TASKS.length} tasks to unlock QR Sign-Out</div>
-      )}
+      {allDone
+        ? <div style={s.unlocked}>🔓 All closure tasks complete — QR Sign-Out is now unlocked!</div>
+        : <div style={s.locked}>🔒 Complete all {CLOSURE_TASKS.length} tasks to unlock QR Sign-Out</div>
+      }
 
       <div style={{ marginTop: 16 }}>
         {CLOSURE_TASKS.map(taskName => {

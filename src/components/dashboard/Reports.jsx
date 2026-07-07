@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
@@ -22,9 +22,9 @@ const s = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', borderBottom: '1px solid #1e293b', background: '#162032' },
   td: { padding: '9px 14px', fontSize: '0.82rem', color: '#e2e8f0', borderBottom: '1px solid #1e293b' },
-  bar: (pct, c) => ({ height: 8, borderRadius: 4, background: c, width: `${Math.min(pct, 100)}%`, minWidth: 4 }),
   barWrap: { background: '#0f172a', borderRadius: 4, height: 8, flex: 1, overflow: 'hidden' },
-  badge: (s) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 700, background: s === 'Present' ? '#14532d' : s === 'Absent' ? '#450a0a' : '#1e3a5f', color: s === 'Present' ? '#4ade80' : s === 'Absent' ? '#f87171' : '#60a5fa' }),
+  bar: (pct, c) => ({ height: 8, borderRadius: 4, background: c, width: `${Math.min(pct, 100)}%`, minWidth: 4 }),
+  error: { background: '#450a0a', border: '1px solid #ef4444', borderRadius: 8, padding: '10px 14px', color: '#fca5a5', fontSize: '0.85rem', marginBottom: 14 },
   loading: { color: '#475569', padding: 20 },
   noData: { color: '#475569', padding: '14px 18px', fontSize: '0.85rem' },
 }
@@ -44,18 +44,23 @@ export default function Reports() {
   const [to, setTo] = useState(today())
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     setLoading(true)
+    setError(null)
     try {
       const [attendance, sales, expenses] = await Promise.all([
-        fetchAttendance(from, to),
-        fetchSales(from, to),
-        fetchExpenses(from, to),
+        fetchCollection('attendance', from, to),
+        fetchCollection('sales', from, to),
+        fetchExpensesInRange(from, to),
       ])
       setData(buildReport(attendance, sales, expenses, from, to))
+    } catch (err) {
+      console.error('Reports fetch error:', err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -80,18 +85,18 @@ export default function Reports() {
         </button>
       </div>
 
+      {error && <div style={s.error}>⚠️ {error}</div>}
       {loading && <div style={s.loading}>Loading report data…</div>}
 
-      {data && (
+      {data && !loading && (
         <>
-          {/* Summary stats */}
           <div style={s.grid}>
             <div style={s.stat('#3b82f6')}><div style={s.statVal}>{data.totalDays}</div><div style={s.statLabel}>Days in Range</div></div>
             <div style={s.stat('#22c55e')}><div style={s.statVal}>{data.totalCheckIns}</div><div style={s.statLabel}>Total Check-Ins</div></div>
             <div style={s.stat('#f97316')}><div style={s.statVal}>₹{data.totalSales.toFixed(0)}</div><div style={s.statLabel}>Total Sales</div></div>
             <div style={s.stat('#22c55e')}><div style={s.statVal}>₹{data.totalOnline.toFixed(0)}</div><div style={s.statLabel}>Online Sales</div></div>
             <div style={s.stat('#fbbf24')}><div style={s.statVal}>₹{data.totalCash.toFixed(0)}</div><div style={s.statLabel}>Cash Sales</div></div>
-            <div style={s.stat('#ec4899')}><div style={s.statVal}>₹{data.totalExpenses.toFixed(0)}</div><div style={s.statLabel}>Total Expenses</div></div>
+            <div style={s.stat('#ec4899')}><div style={s.statVal}>₹{data.totalExpenses.toFixed(0)}</div><div style={s.statLabel}>Approved Expenses</div></div>
           </div>
 
           {/* Sales: Online vs Cash */}
@@ -99,11 +104,7 @@ export default function Reports() {
             <div style={s.sectionHead}>💰 Sales Collection — Online vs Cash</div>
             <table style={s.table}>
               <thead><tr>
-                <th style={s.th}>Date</th>
-                <th style={s.th}>Online (₹)</th>
-                <th style={s.th}>Cash (₹)</th>
-                <th style={s.th}>Total (₹)</th>
-                <th style={s.th}>Split</th>
+                <th style={s.th}>Date</th><th style={s.th}>Online (₹)</th><th style={s.th}>Cash (₹)</th><th style={s.th}>Total (₹)</th><th style={s.th}>Online %</th>
               </tr></thead>
               <tbody>
                 {data.salesByDate.length === 0 && <tr><td colSpan={5} style={s.noData}>No sales in this range</td></tr>}
@@ -113,11 +114,11 @@ export default function Reports() {
                     <td style={{ ...s.td, color: '#4ade80' }}>₹{row.online.toFixed(2)}</td>
                     <td style={{ ...s.td, color: '#fbbf24' }}>₹{row.cash.toFixed(2)}</td>
                     <td style={{ ...s.td, fontWeight: 700 }}>₹{row.total.toFixed(2)}</td>
-                    <td style={{ ...s.td, minWidth: 120 }}>
+                    <td style={{ ...s.td, minWidth: 140 }}>
                       {row.total > 0 && (
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <div style={s.barWrap}><div style={s.bar(row.online / row.total * 100, '#22c55e')} /></div>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{Math.round(row.online / row.total * 100)}%</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b', width: 32 }}>{Math.round(row.online / row.total * 100)}%</span>
                         </div>
                       )}
                     </td>
@@ -141,14 +142,10 @@ export default function Reports() {
             <div style={s.sectionHead}>🧾 Expenses by Category</div>
             <table style={s.table}>
               <thead><tr>
-                <th style={s.th}>Category</th>
-                <th style={s.th}>Approved (₹)</th>
-                <th style={s.th}>Pending (₹)</th>
-                <th style={s.th}>Rejected (₹)</th>
-                <th style={s.th}>Total Claims</th>
-                <th style={s.th}>Breakdown</th>
+                <th style={s.th}>Category</th><th style={s.th}>Approved (₹)</th><th style={s.th}>Pending (₹)</th><th style={s.th}>Rejected (₹)</th><th style={s.th}>Claims</th><th style={s.th}>Split</th>
               </tr></thead>
               <tbody>
+                {data.expenseByCategory.length === 0 && <tr><td colSpan={6} style={s.noData}>No expenses in this range</td></tr>}
                 {data.expenseByCategory.map(row => (
                   <tr key={row.category}>
                     <td style={s.td}>{row.category}</td>
@@ -156,25 +153,27 @@ export default function Reports() {
                     <td style={{ ...s.td, color: '#fbbf24' }}>₹{row.pending.toFixed(2)}</td>
                     <td style={{ ...s.td, color: '#f87171' }}>₹{row.rejected.toFixed(2)}</td>
                     <td style={s.td}>{row.count}</td>
-                    <td style={{ ...s.td, minWidth: 120 }}>
+                    <td style={s.td}>
                       {row.total > 0 && (
-                        <div style={{ display: 'flex', gap: 2, height: 8, borderRadius: 4, overflow: 'hidden', width: 100 }}>
-                          <div style={{ flex: row.approved, background: '#22c55e' }} />
-                          <div style={{ flex: row.pending, background: '#fbbf24' }} />
-                          <div style={{ flex: row.rejected, background: '#ef4444' }} />
+                        <div style={{ display: 'flex', gap: 2, height: 8, borderRadius: 4, overflow: 'hidden', width: 80 }}>
+                          <div style={{ flex: row.approved, background: '#22c55e', minWidth: row.approved > 0 ? 2 : 0 }} />
+                          <div style={{ flex: row.pending, background: '#fbbf24', minWidth: row.pending > 0 ? 2 : 0 }} />
+                          <div style={{ flex: row.rejected, background: '#ef4444', minWidth: row.rejected > 0 ? 2 : 0 }} />
                         </div>
                       )}
                     </td>
                   </tr>
                 ))}
-                <tr style={{ background: '#162032' }}>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#94a3b8' }}>TOTAL</td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#4ade80' }}>₹{data.expenseByCategory.reduce((s, r) => s + r.approved, 0).toFixed(2)}</td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#fbbf24' }}>₹{data.expenseByCategory.reduce((s, r) => s + r.pending, 0).toFixed(2)}</td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#f87171' }}>₹{data.expenseByCategory.reduce((s, r) => s + r.rejected, 0).toFixed(2)}</td>
-                  <td style={s.td}>{data.expenseByCategory.reduce((s, r) => s + r.count, 0)}</td>
-                  <td style={s.td} />
-                </tr>
+                {data.expenseByCategory.length > 0 && (
+                  <tr style={{ background: '#162032' }}>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#94a3b8' }}>TOTAL</td>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#4ade80' }}>₹{data.expenseByCategory.reduce((a, r) => a + r.approved, 0).toFixed(2)}</td>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#fbbf24' }}>₹{data.expenseByCategory.reduce((a, r) => a + r.pending, 0).toFixed(2)}</td>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#f87171' }}>₹{data.expenseByCategory.reduce((a, r) => a + r.rejected, 0).toFixed(2)}</td>
+                    <td style={s.td}>{data.expenseByCategory.reduce((a, r) => a + r.count, 0)}</td>
+                    <td style={s.td} />
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -184,12 +183,7 @@ export default function Reports() {
             <div style={s.sectionHead}>👥 Attendance & Absence — Per Employee</div>
             <table style={s.table}>
               <thead><tr>
-                <th style={s.th}>Employee</th>
-                <th style={s.th}>Present</th>
-                <th style={s.th}>Absent</th>
-                <th style={s.th}>Attendance %</th>
-                <th style={s.th}>On Time</th>
-                <th style={s.th}>Avg Hours</th>
+                <th style={s.th}>Employee</th><th style={s.th}>Present</th><th style={s.th}>Absent</th><th style={s.th}>Attendance %</th><th style={s.th}>On Time</th><th style={s.th}>Avg Hours</th>
               </tr></thead>
               <tbody>
                 {data.attendanceByEmployee.length === 0 && <tr><td colSpan={6} style={s.noData}>No attendance records in this range</td></tr>}
@@ -219,22 +213,18 @@ export default function Reports() {
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
-async function fetchAttendance(from, to) {
-  const q = query(collection(db, 'attendance'), where('date', '>=', from), where('date', '<=', to))
+async function fetchCollection(col, from, to) {
+  const q = query(collection(db, col), where('date', '>=', from), where('date', '<=', to))
   const snap = await getDocs(q)
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
-async function fetchSales(from, to) {
-  const q = query(collection(db, 'sales'), where('date', '>=', from), where('date', '<=', to))
-  const snap = await getDocs(q)
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-}
-
-async function fetchExpenses(from, to) {
-  const q = query(collection(db, 'expenses'), where('date', '>=', from), where('date', '<=', to))
-  const snap = await getDocs(q)
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+async function fetchExpensesInRange(from, to) {
+  // Fetch all expenses and filter client-side to avoid composite index requirement
+  const snap = await getDocs(collection(db, 'expenses'))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(e => e.date >= from && e.date <= to)
 }
 
 // ── Report builder ────────────────────────────────────────────────────────────
@@ -243,7 +233,6 @@ function buildReport(attendance, sales, expenses, from, to) {
   const days = dateRange(from, to)
   const totalDays = days.length
 
-  // Sales by date
   const salesMap = {}
   sales.forEach(r => {
     if (!salesMap[r.date]) salesMap[r.date] = { online: 0, cash: 0 }
@@ -258,7 +247,6 @@ function buildReport(attendance, sales, expenses, from, to) {
   const totalCash = salesByDate.reduce((s, r) => s + r.cash, 0)
   const totalSales = totalOnline + totalCash
 
-  // Expenses by category
   const expenseByCategory = CATEGORIES.map(category => {
     const rows = expenses.filter(e => e.category === category)
     return {
@@ -273,7 +261,6 @@ function buildReport(attendance, sales, expenses, from, to) {
 
   const totalExpenses = expenses.filter(e => e.status === 'approved').reduce((s, e) => s + (e.amount || 0), 0)
 
-  // Attendance per employee
   const empMap = {}
   attendance.forEach(r => {
     if (!empMap[r.userName]) empMap[r.userName] = { records: [] }
@@ -299,9 +286,5 @@ function buildReport(attendance, sales, expenses, from, to) {
     return { name, present, absent, pct, onTime, avgHours }
   }).sort((a, b) => b.present - a.present)
 
-  return {
-    totalDays, totalCheckIns: attendance.length,
-    totalSales, totalOnline, totalCash, totalExpenses,
-    salesByDate, expenseByCategory, attendanceByEmployee,
-  }
+  return { totalDays, totalCheckIns: attendance.length, totalSales, totalOnline, totalCash, totalExpenses, salesByDate, expenseByCategory, attendanceByEmployee }
 }

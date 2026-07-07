@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import Navbar from '../components/shared/Navbar'
 import QRScanner from '../components/attendance/QRScanner'
 import DailyTasks from '../components/tasks/DailyTasks'
@@ -9,12 +9,11 @@ import { useAuth } from '../contexts/AuthContext'
 
 const s = {
   page: { minHeight: '100vh', background: '#0f172a' },
-  content: { padding: 0 },
   dashboard: { padding: 24, maxWidth: 700, margin: '0 auto' },
   welcome: { color: '#38bdf8', fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 },
   date: { color: '#64748b', fontSize: '0.85rem', marginBottom: 24 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 },
-  tile: (c) => ({ background: '#1e293b', borderRadius: 12, padding: 20, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block', transition: 'transform 0.15s' }),
+  tile: (c) => ({ background: '#1e293b', borderRadius: 12, padding: 20, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
   tileIcon: { fontSize: '2rem', marginBottom: 8 },
   tileLabel: { color: '#e2e8f0', fontWeight: 700, fontSize: '0.9rem' },
   tileSub: { color: '#64748b', fontSize: '0.75rem', marginTop: 3 },
@@ -36,11 +35,11 @@ function Dashboard() {
       <div style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
       <div style={s.grid}>
         {TILES.map(t => (
-          <a key={t.path} href={t.path} style={s.tile(t.color)}>
+          <Link key={t.path} to={t.path} style={s.tile(t.color)}>
             <div style={s.tileIcon}>{t.icon}</div>
             <div style={s.tileLabel}>{t.label}</div>
             <div style={s.tileSub}>{t.sub}</div>
-          </a>
+          </Link>
         ))}
       </div>
     </div>
@@ -51,15 +50,13 @@ export default function EmployeeHome() {
   return (
     <div style={s.page}>
       <Navbar />
-      <div style={s.content}>
-        <Routes>
-          <Route index element={<Dashboard />} />
-          <Route path="tasks" element={<DailyTasks />} />
-          <Route path="closure" element={<ClosureTasks />} />
-          <Route path="sales" element={<SalesEntry />} />
-          <Route path="expenses" element={<ExpenseRecorder />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="tasks" element={<DailyTasks />} />
+        <Route path="closure" element={<ClosureTasks />} />
+        <Route path="sales" element={<SalesEntry />} />
+        <Route path="expenses" element={<ExpenseRecorder />} />
+      </Routes>
     </div>
   )
 }

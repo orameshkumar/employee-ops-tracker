@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, setDoc, getDoc, getDocs,
-  query, where, orderBy, updateDoc, serverTimestamp, Timestamp,
+  query, where, orderBy, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -109,15 +109,20 @@ export async function saveExpense(uid, userName, expense) {
 }
 
 export async function getMyExpenses(uid) {
-  const q = query(collection(db, 'expenses'), where('uid', '==', uid), orderBy('createdAt', 'desc'))
+  // Single where clause — no composite index needed
+  const q = query(collection(db, 'expenses'), where('uid', '==', uid))
   const snap = await getDocs(q)
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  // Sort client-side to avoid requiring a composite index
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
 }
 
 export async function getAllExpenses() {
-  const q = query(collection(db, 'expenses'), orderBy('createdAt', 'desc'))
-  const snap = await getDocs(q)
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  const snap = await getDocs(collection(db, 'expenses'))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
 }
 
 export async function updateExpenseStatus(expenseId, status) {

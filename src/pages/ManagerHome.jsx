@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/shared/Navbar'
 import QRGenerator from '../components/attendance/QRGenerator'
@@ -6,7 +6,6 @@ import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
 import Reports from '../components/dashboard/Reports'
 import AppConfig from '../components/config/AppConfig'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
-import { useAuth } from '../contexts/AuthContext'
 
 const s = {
   page: { minHeight: '100vh', background: '#0f172a' },
@@ -39,12 +38,14 @@ const TILES = [
 function Dashboard() {
   const [attendance, setAttendance] = useState([])
   const [sales, setSales] = useState([])
+  const [error, setError] = useState(null)
   const todayStr = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
-    getAllAttendance(todayStr).then(setAttendance)
-    getAllSales(todayStr).then(setSales)
-  }, [])
+    Promise.all([getAllAttendance(todayStr), getAllSales(todayStr)])
+      .then(([att, sal]) => { setAttendance(att); setSales(sal) })
+      .catch(err => setError(err.message))
+  }, [todayStr])
 
   const checkedIn = attendance.filter(a => a.checkIn && !a.checkOut).length
   const checkedOut = attendance.filter(a => a.checkOut).length
@@ -57,8 +58,10 @@ function Dashboard() {
       <div style={s.welcome}>📊 Manager Dashboard</div>
       <div style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
 
+      {error && <div style={{ background: '#450a0a', color: '#fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem' }}>{error}</div>}
+
       <div style={s.tileGrid}>
-        {TILES.map(t => <a key={t.path} href={t.path} style={s.tile(t.color)}><div style={s.tileIcon}>{t.icon}</div><div style={s.tileLabel}>{t.label}</div></a>)}
+        {TILES.map(t => <Link key={t.path} to={t.path} style={s.tile(t.color)}><div style={s.tileIcon}>{t.icon}</div><div style={s.tileLabel}>{t.label}</div></Link>)}
       </div>
 
       <div style={s.statsGrid}>
@@ -74,11 +77,7 @@ function Dashboard() {
         <div style={s.sectionHead}>📋 Today's Attendance</div>
         <table style={s.table}>
           <thead><tr>
-            <th style={s.th}>Employee</th>
-            <th style={s.th}>Check In</th>
-            <th style={s.th}>Check Out</th>
-            <th style={s.th}>Closure</th>
-            <th style={s.th}>Status</th>
+            <th style={s.th}>Employee</th><th style={s.th}>Check In</th><th style={s.th}>Check Out</th><th style={s.th}>Closure</th><th style={s.th}>Status</th>
           </tr></thead>
           <tbody>
             {attendance.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No records yet today</td></tr>}
@@ -99,11 +98,7 @@ function Dashboard() {
         <div style={s.sectionHead}>💰 Today's Sales</div>
         <table style={s.table}>
           <thead><tr>
-            <th style={s.th}>Employee</th>
-            <th style={s.th}>Online</th>
-            <th style={s.th}>Cash</th>
-            <th style={s.th}>Total</th>
-            <th style={s.th}>Notes</th>
+            <th style={s.th}>Employee</th><th style={s.th}>Online</th><th style={s.th}>Cash</th><th style={s.th}>Total</th><th style={s.th}>Notes</th>
           </tr></thead>
           <tbody>
             {sales.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No sales recorded yet</td></tr>}
