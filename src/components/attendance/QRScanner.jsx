@@ -389,8 +389,10 @@ export default function QRScanner() {
           {isCheckedIn && (
             <button
               style={s.btn(isPastShopEnd && !closureReady ? 'gray' : 'red')}
-              onClick={isPastShopEnd && !closureReady ? undefined : requestCameraAndScan}
-              disabled={(isPastShopEnd && !closureReady) || permState === 'requesting'}
+              onClick={isPastShopEnd && !closureReady
+                ? () => setMessage({ ok: false, text: '⚠️ Complete Closure Tasks before checking out.\n\nGo to Closure Tasks, finish the checklist, then come back to scan out.' })
+                : requestCameraAndScan}
+              disabled={permState === 'requesting'}
               title={isPastShopEnd && !closureReady ? 'Complete closure tasks first' : ''}
             >
               {permState === 'requesting' ? '⏳ Requesting camera…' : `📷 Scan Check-Out${isPastShopEnd ? ' (Final)' : ' (Break)'}`}
