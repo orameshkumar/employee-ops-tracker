@@ -75,11 +75,15 @@ export default function QRScanner() {
   useEffect(() => { collectDiag().then(setDiag) }, [])
 
   async function resolveCamera() {
+    // Use enumerateDevices instead of Html5Qrcode.getCameras() — getCameras()
+    // opens and closes camera hardware internally, causing a release delay that
+    // makes the subsequent scanner.start() get a black feed or fail entirely.
     try {
-      const cameras = await Html5Qrcode.getCameras()
-      if (cameras && cameras.length > 0) {
-        const back = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[cameras.length - 1]
-        cameraIdRef.current = back?.id || null
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const cams = devices.filter(d => d.kind === 'videoinput')
+      if (cams.length > 0) {
+        const back = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1]
+        cameraIdRef.current = back?.deviceId || null
       }
     } catch (_) { cameraIdRef.current = null }
   }
