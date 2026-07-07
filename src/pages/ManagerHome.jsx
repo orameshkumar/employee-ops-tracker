@@ -49,8 +49,15 @@ function Dashboard() {
       .catch(err => setError(err.message))
   }, [todayStr])
 
-  const checkedIn = attendance.filter(a => a.checkIn && !a.checkOut).length
-  const checkedOut = attendance.filter(a => a.checkOut).length
+  // Group sessions by employee uid for summary counts
+  const byUid = attendance.reduce((acc, a) => {
+    if (!acc[a.uid]) acc[a.uid] = { name: a.userName, sessions: [] }
+    acc[a.uid].sessions.push(a)
+    return acc
+  }, {})
+  const employeeRows = Object.values(byUid)
+  const checkedIn = employeeRows.filter(e => e.sessions.some(s => s.checkIn && !s.checkOut)).length
+  const checkedOut = employeeRows.filter(e => e.sessions.every(s => s.checkOut)).length
   const totalSales = sales.reduce((s, r) => s + (r.grandTotal || 0), 0)
   const totalOnline = sales.reduce((s, r) => s + (r.onlineTotal || 0), 0)
   const totalCash = sales.reduce((s, r) => s + (r.cashSales || 0), 0)
@@ -67,9 +74,9 @@ function Dashboard() {
       </div>
 
       <div style={s.statsGrid}>
-        <div style={s.stat('#3b82f6')}><div style={s.statVal}>{attendance.length}</div><div style={s.statLabel}>Total Present</div></div>
+        <div style={s.stat('#3b82f6')}><div style={s.statVal}>{employeeRows.length}</div><div style={s.statLabel}>Total Present</div></div>
         <div style={s.stat('#22c55e')}><div style={s.statVal}>{checkedIn}</div><div style={s.statLabel}>Currently In</div></div>
-        <div style={s.stat('#60a5fa')}><div style={s.statVal}>{checkedOut}</div><div style={s.statLabel}>Checked Out</div></div>
+        <div style={s.stat('#60a5fa')}><div style={s.statVal}>{checkedOut}</div><div style={s.statLabel}>Fully Out</div></div>
         <div style={s.stat('#f97316')}><div style={s.statVal}>₹{totalSales.toFixed(0)}</div><div style={s.statLabel}>Today's Sales</div></div>
         <div style={s.stat('#22c55e')}><div style={s.statVal}>₹{totalOnline.toFixed(0)}</div><div style={s.statLabel}>Online Sales</div></div>
         <div style={s.stat('#fbbf24')}><div style={s.statVal}>₹{totalCash.toFixed(0)}</div><div style={s.statLabel}>Cash Sales</div></div>
@@ -82,16 +89,26 @@ function Dashboard() {
             <th style={s.th}>Employee</th><th style={s.th}>Check In</th><th style={s.th}>Check Out</th><th style={s.th}>Closure</th><th style={s.th}>Status</th>
           </tr></thead>
           <tbody>
-            {attendance.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No records yet today</td></tr>}
-            {attendance.map(a => (
-              <tr key={a.id}>
-                <td style={s.td}>{a.userName}</td>
-                <td style={s.td}>{fmtTime(a.checkIn)}</td>
-                <td style={s.td}>{fmtTime(a.checkOut) || '—'}</td>
-                <td style={s.td}>{a.closureComplete ? '✅' : '⏳'}</td>
-                <td style={s.td}><span style={s.badge(a.checkOut ? 'out' : 'in')}>{a.checkOut ? 'Checked Out' : 'In Office'}</span></td>
-              </tr>
-            ))}
+            {employeeRows.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No records yet today</td></tr>}
+            {employeeRows.map(emp => {
+              const active = emp.sessions.find(s => s.checkIn && !s.checkOut)
+              const allOut = emp.sessions.length > 0 && emp.sessions.every(s => s.checkOut)
+              const closureDone = emp.sessions.some(s => s.closureComplete)
+              const firstIn = emp.sessions[0]?.checkIn
+              const lastOut = emp.sessions.filter(s => s.checkOut).sort((a, b) => (b.checkOut?.seconds || 0) - (a.checkOut?.seconds || 0))[0]?.checkOut
+              return (
+                <tr key={emp.name}>
+                  <td style={s.td}>
+                    {emp.name}
+                    {emp.sessions.length > 1 && <span style={{ color: '#a855f7', fontSize: '0.7rem', marginLeft: 6 }}>{emp.sessions.length} sessions</span>}
+                  </td>
+                  <td style={s.td}>{fmtTime(firstIn)}</td>
+                  <td style={s.td}>{allOut ? fmtTime(lastOut) : '—'}</td>
+                  <td style={s.td}>{closureDone ? '✅' : '⏳'}</td>
+                  <td style={s.td}><span style={s.badge(active ? 'in' : 'out')}>{active ? 'In Office' : 'Checked Out'}</span></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

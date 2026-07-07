@@ -135,6 +135,18 @@ export default function AppConfig() {
             <input style={s.input} value={form.shopName} onChange={e => set('shopName', e.target.value)} placeholder="Enter your shop name" />
             <div style={s.hint}>Displayed in the app header and reports</div>
           </div>
+          <div style={s.row2}>
+            <div style={s.field}>
+              <label style={s.label}>Shop Opening Time</label>
+              <input style={s.input} type="time" value={form.shopStartTime} onChange={e => set('shopStartTime', e.target.value)} />
+              <div style={s.hint}>First check-in expected from this time</div>
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Shop Closing Time</label>
+              <input style={s.input} type="time" value={form.shopEndTime} onChange={e => set('shopEndTime', e.target.value)} />
+              <div style={s.hint}>Closure tasks required for sign-out after this time</div>
+            </div>
+          </div>
         </div>
 
         <div style={s.section}>

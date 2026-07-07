@@ -4,6 +4,8 @@ import { db } from '../firebase/config'
 
 export const DEFAULT_SETTINGS = {
   shopName: 'My Shop',
+  shopStartTime: '09:00',
+  shopEndTime: '21:00',
   imageMaxWidth: 1280,
   imageMaxHeight: 960,
   imageQuality: 0.8,

@@ -1,37 +1,57 @@
 import {
   collection, doc, addDoc, setDoc, getDoc, getDocs,
-  query, where, orderBy, updateDoc, serverTimestamp,
+  query, where, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
 // ── Attendance ──────────────────────────────────────────────────────────────
+// Each check-in creates a new session document (supports multiple sessions/day).
 
 export async function checkIn(uid, userName) {
-  const today = todayStr()
-  const ref = doc(db, 'attendance', `${uid}_${today}`)
-  const snap = await getDoc(ref)
-  if (snap.exists()) throw new Error('Already checked in today')
-  await setDoc(ref, {
-    uid, userName, date: today,
+  const openSessions = await getOpenSessions(uid)
+  if (openSessions.length > 0) throw new Error('Already checked in. Please check out first.')
+  await addDoc(collection(db, 'attendance'), {
+    uid, userName, date: todayStr(),
     checkIn: serverTimestamp(),
     checkOut: null,
     closureComplete: false,
   })
 }
 
-export async function checkOut(uid) {
-  const today = todayStr()
-  const ref = doc(db, 'attendance', `${uid}_${today}`)
-  const snap = await getDoc(ref)
-  if (!snap.exists()) throw new Error('No check-in record found')
-  if (!snap.data().closureComplete) throw new Error('Complete closure tasks before signing out')
-  await updateDoc(ref, { checkOut: serverTimestamp() })
+// requireClosure should be true when the employee is leaving for the day (after shop end time).
+export async function checkOut(uid, requireClosure = false) {
+  const openSessions = await getOpenSessions(uid)
+  if (openSessions.length === 0) throw new Error('No active check-in found.')
+  const session = openSessions[0]
+  if (requireClosure && !session.closureComplete) {
+    throw new Error('Complete all closure tasks before your final sign-out.')
+  }
+  await updateDoc(doc(db, 'attendance', session.id), { checkOut: serverTimestamp() })
+}
+
+async function getOpenSessions(uid) {
+  const q = query(
+    collection(db, 'attendance'),
+    where('uid', '==', uid),
+    where('date', '==', todayStr()),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(s => s.checkIn && !s.checkOut)
+    .sort((a, b) => (b.checkIn?.seconds || 0) - (a.checkIn?.seconds || 0))
 }
 
 export async function getTodayAttendance(uid) {
-  const ref = doc(db, 'attendance', `${uid}_${todayStr()}`)
-  const snap = await getDoc(ref)
-  return snap.exists() ? snap.data() : null
+  const q = query(
+    collection(db, 'attendance'),
+    where('uid', '==', uid),
+    where('date', '==', todayStr()),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.checkIn?.seconds || 0) - (b.checkIn?.seconds || 0))
 }
 
 export async function getAllAttendance(dateStr) {
@@ -75,9 +95,9 @@ export async function getTodayClosureTasks(uid) {
 }
 
 export async function markClosureComplete(uid) {
-  const today = todayStr()
-  const ref = doc(db, 'attendance', `${uid}_${today}`)
-  await updateDoc(ref, { closureComplete: true })
+  const openSessions = await getOpenSessions(uid)
+  if (openSessions.length === 0) return // nothing open to mark
+  await updateDoc(doc(db, 'attendance', openSessions[0].id), { closureComplete: true })
 }
 
 // ── Sales ────────────────────────────────────────────────────────────────────
