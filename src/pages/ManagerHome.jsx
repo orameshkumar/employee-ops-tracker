@@ -9,6 +9,7 @@ import AppConfig from '../components/config/AppConfig'
 import EmployeeManagement from '../components/employees/EmployeeManagement'
 import HistoryPage from '../components/history/HistoryPage'
 import BackupRestore from '../components/backup/BackupRestore'
+import TaskVerificationReport from '../components/reports/TaskVerificationReport'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
 import { loadSettings } from '../hooks/useAppSettings'
 import { fmtDate } from '../utils/dateUtils'
@@ -44,8 +45,9 @@ const TILES = [
   { icon: '🧾', label: 'Expenses', path: '/manager/expenses', color: '#ec4899' },
   { icon: '📋', label: 'History', path: '/manager/history', color: '#06b6d4' },
   { icon: '📊', label: 'Reports', path: '/manager/reports', color: '#f97316' },
-  { icon: '🗄️', label: 'Backup', path: '/manager/backup', color: '#d97706' },
-  { icon: '⚙️', label: 'Config', path: '/manager/config', color: '#6366f1' },
+  { icon: '🗄️', label: 'Backup',      path: '/manager/backup',      color: '#d97706' },
+  { icon: '✅', label: 'Task Report', path: '/manager/task-report', color: '#8b5cf6' },
+  { icon: '⚙️', label: 'Config',      path: '/manager/config',      color: '#6366f1' },
 ]
 
 function Dashboard() {
@@ -194,6 +196,7 @@ export default function ManagerHome() {
         <Route path="employees" element={<EmployeeManagement />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="backup" element={<BackupRestore />} />
+        <Route path="task-report" element={<TaskVerificationReport />} />
         <Route path="config" element={<AppConfig />} />
       </Routes>
     </div>
