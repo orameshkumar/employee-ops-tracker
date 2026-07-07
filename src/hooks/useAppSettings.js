@@ -8,6 +8,24 @@ export const DEFAULT_SETTINGS = {
   imageMaxHeight: 960,
   imageQuality: 0.8,
   imageMaxSizeKB: 500,
+  dailyTasks: [
+    'Morning store opening check',
+    'Stock level verification',
+    'Equipment / POS system check',
+    'Cleanliness & hygiene inspection',
+    'Team briefing completed',
+    'Customer area setup',
+    'Safety checklist',
+  ],
+  closureTasks: [
+    'All cash counted & secured',
+    'POS system closed & reports printed',
+    'Stock doors locked',
+    'Lights & AC turned off',
+    'Cleaning completed',
+    'Alarm system armed',
+    'Exit doors locked & verified',
+  ],
 }
 
 export async function loadSettings() {

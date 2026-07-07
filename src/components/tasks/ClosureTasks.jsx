@@ -2,17 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { saveClosureTask, getTodayClosureTasks, markClosureComplete } from '../../firebase/firestore'
 import { uploadPhoto, taskPhotoPath } from '../../firebase/storage'
+import { useAppSettings } from '../../hooks/useAppSettings'
 import PhotoCapture from '../shared/PhotoCapture'
-
-const CLOSURE_TASKS = [
-  'All cash counted & secured',
-  'POS system closed & reports printed',
-  'Stock doors locked',
-  'Lights & AC turned off',
-  'Cleaning completed',
-  'Alarm system armed',
-  'Exit doors locked & verified',
-]
 
 const s = {
   wrap: { padding: 24, maxWidth: 640, margin: '0 auto' },
@@ -28,10 +19,12 @@ const s = {
   bar: (pct) => ({ height: '100%', width: `${pct}%`, background: pct === 100 ? '#22c55e' : '#a855f7', transition: 'width 0.4s ease', borderRadius: 20 }),
   unlocked: { background: '#14532d', border: '1px solid #16a34a', borderRadius: 12, padding: 16, textAlign: 'center', color: '#4ade80', fontWeight: 700, fontSize: '1rem' },
   locked: { background: '#1c1917', border: '1px solid #57534e', borderRadius: 12, padding: 16, textAlign: 'center', color: '#78716c', fontSize: '0.9rem' },
+  loading: { color: '#475569', fontSize: '0.85rem', padding: '20px 0' },
 }
 
 export default function ClosureTasks() {
   const { user, profile } = useAuth()
+  const { settings, loading: settingsLoading } = useAppSettings()
   const [saved, setSaved] = useState([])
   const [photoMap, setPhotoMap] = useState({})
   const [saving, setSaving] = useState({})
@@ -41,9 +34,10 @@ export default function ClosureTasks() {
     getTodayClosureTasks(user.uid).then(setSaved).catch(console.error)
   }, [user.uid])
 
+  const taskList = settings.closureTasks || []
   const savedNames = saved.map(t => t.taskName)
-  const allDone = savedNames.length === CLOSURE_TASKS.length
-  const pct = Math.round((savedNames.length / CLOSURE_TASKS.length) * 100)
+  const allDone = taskList.length > 0 && savedNames.length >= taskList.length
+  const pct = taskList.length > 0 ? Math.round((savedNames.length / taskList.length) * 100) : 0
 
   useEffect(() => {
     if (allDone && !markedComplete.current) {
@@ -76,6 +70,8 @@ export default function ClosureTasks() {
     }
   }
 
+  if (settingsLoading) return <div style={{ ...s.wrap }}><div style={s.loading}>Loading tasks…</div></div>
+
   return (
     <div style={s.wrap}>
       <div style={s.title}>🔒 Closure Tasks</div>
@@ -83,16 +79,21 @@ export default function ClosureTasks() {
 
       <div style={s.progress}><div style={s.bar(pct)} /></div>
       <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: 16 }}>
-        {savedNames.length} / {CLOSURE_TASKS.length} completed ({pct}%)
+        {savedNames.length} / {taskList.length} completed ({pct}%)
       </div>
 
-      {allDone
-        ? <div style={s.unlocked}>🔓 All closure tasks complete — QR Sign-Out is now unlocked!</div>
-        : <div style={s.locked}>🔒 Complete all {CLOSURE_TASKS.length} tasks to unlock QR Sign-Out</div>
-      }
+      {taskList.length === 0 ? (
+        <div style={{ color: '#475569', padding: '20px 0' }}>
+          No closure tasks configured yet. Ask your manager to add tasks in ⚙ Config.
+        </div>
+      ) : allDone ? (
+        <div style={s.unlocked}>🔓 All closure tasks complete — QR Sign-Out is now unlocked!</div>
+      ) : (
+        <div style={s.locked}>🔒 Complete all {taskList.length} tasks to unlock QR Sign-Out</div>
+      )}
 
       <div style={{ marginTop: 16 }}>
-        {CLOSURE_TASKS.map(taskName => {
+        {taskList.map(taskName => {
           const isDone = savedNames.includes(taskName)
           const doneData = saved.find(t => t.taskName === taskName)
           return (
