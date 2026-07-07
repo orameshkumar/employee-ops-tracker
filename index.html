@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
     <title>Employee Ops Tracker</title>
+    <script>
+      // Decode the redirect from 404.html and restore the route
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        // Also handle ?p= query param from 404.html
+        var search = location.search;
+        if (search && search.indexOf('?p=') !== -1) {
+          var path = search.slice(1).split('&').reduce(function(p, s) {
+            var r = s.split('=');
+            return r[0] === 'p' ? decodeURIComponent(r[1].replace(/~and~/g, '&')) : p;
+          }, null);
+          if (path) history.replaceState(null, null, '/employee-ops-tracker' + path);
+        }
+      })();
+    </script>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; }
