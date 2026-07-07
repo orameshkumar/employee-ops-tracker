@@ -23,8 +23,8 @@ const s = {
   title: { color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
   card: { background: '#1e293b', borderRadius: 12, padding: 18, border: '1px solid #334155', marginBottom: 14 },
-  // #qr-reader must be visible in DOM — do NOT use display:none or overflow:hidden
-  scanBox: { width: '100%', minHeight: 300, borderRadius: 8, overflow: 'visible', background: '#000', position: 'relative' },
+  // #qr-reader: no overflow:hidden, no borderRadius that clips the video element html5-qrcode injects
+  scanBox: { width: '100%', minHeight: 300, background: '#000' },
   btn: (c) => ({
     padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer',
     fontWeight: 700, fontSize: '0.9rem', marginRight: 8,
@@ -122,13 +122,13 @@ export default function QRScanner() {
       return now.getHours() * 60 + now.getMinutes() >= eh * 60 + em
     }
 
-    const qrboxSize = Math.min(250, Math.max(200, (window.innerWidth || 400) - 80))
-    const scanner = new Html5Qrcode('qr-reader')
+    const qrboxSize = Math.min(250, Math.max(180, (window.innerWidth || 400) - 80))
+    const scanner = new Html5Qrcode('qr-reader', { verbose: false })
     scannerRef.current = scanner
 
     scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize } },
+      { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, aspectRatio: 1.0 },
       async (decodedText) => {
         try { await scanner.stop() } catch (_) {}
         scannerRef.current = null
@@ -170,7 +170,16 @@ export default function QRScanner() {
         }
       },
       () => {} // frame error — ignore
-    ).catch(err => {
+    ).then(() => {
+      // iOS Safari requires playsinline on the video element to show the feed.
+      // html5-qrcode injects its own <video> — patch it immediately after start.
+      const v = document.querySelector('#qr-reader video')
+      if (v) {
+        v.setAttribute('playsinline', '')
+        v.setAttribute('webkit-playsinline', '')
+        v.muted = true
+      }
+    }).catch(err => {
       console.error('Camera error:', err)
       scannerRef.current = null
       setScanning(false)

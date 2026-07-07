@@ -96,7 +96,6 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
         } catch (err2) {
           setError(camErrMsg(err2))
           setStep('error')
-          // Refresh diagnostics after failure
           collectDiag().then(setDiag)
           return
         }
@@ -109,12 +108,22 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
     }
 
     streamRef.current = stream
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream
-      videoRef.current.play().catch(() => {})
-    }
+
+    // setStep('streaming') first so React mounts the <video> element,
+    // then the useEffect below assigns srcObject after DOM commit.
     setStep('streaming')
   }
+
+  // Assign stream to video element AFTER React commits it to the DOM.
+  // videoRef.current is null until the <video> element is rendered,
+  // so we cannot assign srcObject in openCamera() directly.
+  useEffect(() => {
+    if (step !== 'streaming' || !streamRef.current) return
+    const video = videoRef.current
+    if (!video) return
+    video.srcObject = streamRef.current
+    video.play().catch(() => {})
+  }, [step])
 
   function capturePhoto() {
     const video  = videoRef.current
@@ -177,19 +186,24 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
         </div>
       )}
 
-      {/* Camera feed */}
+      {/* Camera feed — video is ALWAYS mounted so videoRef.current is never null.
+          Hidden via display:none when not streaming. */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ ...s.video, display: step === 'streaming' ? 'block' : 'none' }}
+      />
       {step === 'streaming' && (
-        <>
-          <video ref={videoRef} style={s.video} autoPlay playsInline muted />
-          <div style={s.btnRow}>
-            <button style={{ ...s.btn, background: '#3b82f6', color: '#fff' }} onClick={capturePhoto}>
-              ✅ Capture Photo
-            </button>
-            <button style={{ ...s.btn, background: '#475569', color: '#fff' }} onClick={() => { stopStream(); setStep('idle') }}>
-              ✕ Cancel
-            </button>
-          </div>
-        </>
+        <div style={s.btnRow}>
+          <button style={{ ...s.btn, background: '#3b82f6', color: '#fff' }} onClick={capturePhoto}>
+            ✅ Capture Photo
+          </button>
+          <button style={{ ...s.btn, background: '#475569', color: '#fff' }} onClick={() => { stopStream(); setStep('idle') }}>
+            ✕ Cancel
+          </button>
+        </div>
       )}
 
       {/* Captured preview */}
