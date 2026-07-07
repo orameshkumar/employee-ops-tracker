@@ -1,14 +1,10 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from './config'
-
-export async function uploadPhoto(path, dataUrl) {
-  // Convert base64 data URL to binary Blob — ~25% smaller payload than uploadString,
-  // more reliable on mobile connections.
-  const res = await fetch(dataUrl)
-  const blob = await res.blob()
-  const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, blob)
-  return getDownloadURL(storageRef)
+// Photos are stored as base64 data URLs directly in Firestore documents.
+// This avoids Firebase Storage CORS configuration requirements when the app
+// is hosted on a non-Firebase domain (e.g. GitHub Pages).
+// With the 200KB image size limit, each photo field is ≤267KB — well within
+// Firestore's 1MB document limit.
+export async function uploadPhoto(_path, dataUrl) {
+  return dataUrl
 }
 
 export function taskPhotoPath(uid, type, taskName) {
