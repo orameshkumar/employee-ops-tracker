@@ -1,9 +1,13 @@
-import { ref, uploadString, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { storage } from './config'
 
 export async function uploadPhoto(path, dataUrl) {
+  // Convert base64 data URL to binary Blob — ~25% smaller payload than uploadString,
+  // more reliable on mobile connections.
+  const res = await fetch(dataUrl)
+  const blob = await res.blob()
   const storageRef = ref(storage, path)
-  await uploadString(storageRef, dataUrl, 'data_url')
+  await uploadBytes(storageRef, blob)
   return getDownloadURL(storageRef)
 }
 

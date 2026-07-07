@@ -16,7 +16,7 @@ const s = {
   user: { fontSize: '0.75rem', color: 'var(--app-muted, #64748b)' },
   btn: { background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: '0.78rem' },
   themeBtn: { background: 'transparent', border: '1px solid var(--app-border, #334155)', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 },
-  themePop: { position: 'absolute', top: 58, right: 0, background: 'var(--app-surface, #1e293b)', border: '1px solid var(--app-border, #334155)', borderRadius: 10, padding: 8, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160, boxShadow: '0 4px 24px rgba(0,0,0,0.6)' },
+  themePop: { position: 'fixed', top: 60, right: 8, background: 'var(--app-surface, #1e293b)', border: '1px solid var(--app-border, #334155)', borderRadius: 10, padding: 8, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160, boxShadow: '0 4px 24px rgba(0,0,0,0.6)' },
   themeItem: (active) => ({ padding: '7px 12px', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 8, fontWeight: active ? 700 : 400, background: active ? 'var(--app-border, #334155)' : 'transparent', color: 'var(--app-text, #e2e8f0)', border: 'none', width: '100%', textAlign: 'left' }),
   dot: (color) => ({ width: 12, height: 12, borderRadius: '50%', background: color, flexShrink: 0 }),
 }
