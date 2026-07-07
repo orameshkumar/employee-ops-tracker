@@ -1,8 +1,10 @@
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/shared/Navbar'
 import QRGenerator from '../components/attendance/QRGenerator'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
+import Reports from '../components/dashboard/Reports'
+import AppConfig from '../components/config/AppConfig'
 import { getAllAttendance, getAllSales } from '../firebase/firestore'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -20,7 +22,7 @@ const s = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', borderBottom: '1px solid #1e293b', background: '#0f172a' },
   td: { padding: '10px 14px', fontSize: '0.82rem', color: '#e2e8f0', borderBottom: '1px solid #1e293b' },
-  badge: (c) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 700, background: c === 'in' ? '#14532d' : c === 'out' ? '#1e3a5f' : '#3b2a00', color: c === 'in' ? '#4ade80' : c === 'out' ? '#60a5fa' : '#fbbf24' }),
+  badge: (c) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 700, background: c === 'in' ? '#14532d' : '#1e3a5f', color: c === 'in' ? '#4ade80' : '#60a5fa' }),
   tileGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 },
   tile: (c) => ({ background: '#1e293b', borderRadius: 10, padding: 16, border: `1px solid ${c}`, cursor: 'pointer', textDecoration: 'none', display: 'block' }),
   tileIcon: { fontSize: '1.6rem', marginBottom: 6 },
@@ -31,10 +33,10 @@ const TILES = [
   { icon: '🔑', label: 'QR Codes', path: '/manager/qr', color: '#3b82f6' },
   { icon: '🧾', label: 'Expenses', path: '/manager/expenses', color: '#ec4899' },
   { icon: '📊', label: 'Reports', path: '/manager/reports', color: '#f97316' },
+  { icon: '⚙️', label: 'Config', path: '/manager/config', color: '#6366f1' },
 ]
 
 function Dashboard() {
-  const { profile } = useAuth()
   const [attendance, setAttendance] = useState([])
   const [sales, setSales] = useState([])
   const todayStr = new Date().toISOString().split('T')[0]
@@ -69,32 +71,24 @@ function Dashboard() {
       </div>
 
       <div style={s.section}>
-        <div style={s.sectionHead}>📋 Today's Attendance — {todayStr}</div>
+        <div style={s.sectionHead}>📋 Today's Attendance</div>
         <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={s.th}>Employee</th>
-              <th style={s.th}>Check In</th>
-              <th style={s.th}>Check Out</th>
-              <th style={s.th}>Closure</th>
-              <th style={s.th}>Status</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th style={s.th}>Employee</th>
+            <th style={s.th}>Check In</th>
+            <th style={s.th}>Check Out</th>
+            <th style={s.th}>Closure</th>
+            <th style={s.th}>Status</th>
+          </tr></thead>
           <tbody>
-            {attendance.length === 0 && (
-              <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No attendance records yet today</td></tr>
-            )}
+            {attendance.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No records yet today</td></tr>}
             {attendance.map(a => (
               <tr key={a.id}>
                 <td style={s.td}>{a.userName}</td>
                 <td style={s.td}>{fmtTime(a.checkIn)}</td>
                 <td style={s.td}>{fmtTime(a.checkOut) || '—'}</td>
                 <td style={s.td}>{a.closureComplete ? '✅' : '⏳'}</td>
-                <td style={s.td}>
-                  <span style={s.badge(a.checkOut ? 'out' : 'in')}>
-                    {a.checkOut ? 'Checked Out' : 'In Office'}
-                  </span>
-                </td>
+                <td style={s.td}><span style={s.badge(a.checkOut ? 'out' : 'in')}>{a.checkOut ? 'Checked Out' : 'In Office'}</span></td>
               </tr>
             ))}
           </tbody>
@@ -102,21 +96,17 @@ function Dashboard() {
       </div>
 
       <div style={s.section}>
-        <div style={s.sectionHead}>💰 Today's Sales Summary</div>
+        <div style={s.sectionHead}>💰 Today's Sales</div>
         <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={s.th}>Employee</th>
-              <th style={s.th}>Online</th>
-              <th style={s.th}>Cash</th>
-              <th style={s.th}>Total</th>
-              <th style={s.th}>Notes</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th style={s.th}>Employee</th>
+            <th style={s.th}>Online</th>
+            <th style={s.th}>Cash</th>
+            <th style={s.th}>Total</th>
+            <th style={s.th}>Notes</th>
+          </tr></thead>
           <tbody>
-            {sales.length === 0 && (
-              <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No sales recorded yet today</td></tr>
-            )}
+            {sales.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No sales recorded yet</td></tr>}
             {sales.map(r => (
               <tr key={r.id}>
                 <td style={s.td}>{r.userName}</td>
@@ -129,15 +119,6 @@ function Dashboard() {
           </tbody>
         </table>
       </div>
-    </div>
-  )
-}
-
-function Reports() {
-  return (
-    <div style={{ ...s.dash }}>
-      <div style={{ color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>📊 Reports</div>
-      <div style={{ color: '#64748b' }}>Full reports module — coming in next version. Current data available on the Dashboard.</div>
     </div>
   )
 }
@@ -157,6 +138,7 @@ export default function ManagerHome() {
         <Route path="qr" element={<QRGenerator />} />
         <Route path="expenses" element={<ExpenseRecorder />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="config" element={<AppConfig />} />
       </Routes>
     </div>
   )

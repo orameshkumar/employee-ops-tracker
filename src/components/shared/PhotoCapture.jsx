@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { loadSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
 
 const s = {
   wrap: { marginTop: 10 },
@@ -9,6 +10,7 @@ const s = {
   capture: { background: '#3b82f6', color: '#fff' },
   retake: { background: '#64748b', color: '#fff' },
   label: { fontSize: '0.8rem', color: '#94a3b8', marginBottom: 6 },
+  meta: { fontSize: '0.7rem', color: '#475569', marginTop: 4 },
 }
 
 export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' }) {
@@ -16,6 +18,12 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
   const canvasRef = useRef(null)
   const [streaming, setStreaming] = useState(false)
   const [photo, setPhoto] = useState(null)
+  const [photoMeta, setPhotoMeta] = useState(null)
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+
+  useEffect(() => {
+    loadSettings().then(setSettings)
+  }, [])
 
   async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -27,11 +35,37 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
   function capturePhoto() {
     const canvas = canvasRef.current
     const video = videoRef.current
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d').drawImage(video, 0, 0)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+
+    let w = video.videoWidth
+    let h = video.videoHeight
+
+    // Downscale to configured max dimensions
+    const maxW = settings.imageMaxWidth
+    const maxH = settings.imageMaxHeight
+    if (w > maxW || h > maxH) {
+      const ratio = Math.min(maxW / w, maxH / h)
+      w = Math.round(w * ratio)
+      h = Math.round(h * ratio)
+    }
+
+    canvas.width = w
+    canvas.height = h
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h)
+
+    // Compress to configured quality and max size
+    let quality = settings.imageQuality
+    let dataUrl = canvas.toDataURL('image/jpeg', quality)
+
+    // Reduce quality further if still over max KB
+    const maxBytes = settings.imageMaxSizeKB * 1024
+    while (dataUrl.length * 0.75 > maxBytes && quality > 0.2) {
+      quality = Math.max(0.2, quality - 0.1)
+      dataUrl = canvas.toDataURL('image/jpeg', quality)
+    }
+
+    const sizeKB = Math.round(dataUrl.length * 0.75 / 1024)
     setPhoto(dataUrl)
+    setPhotoMeta({ width: w, height: h, sizeKB, quality: Math.round(quality * 100) })
     video.srcObject?.getTracks().forEach(t => t.stop())
     setStreaming(false)
     onPhoto(dataUrl)
@@ -39,6 +73,7 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
 
   function retake() {
     setPhoto(null)
+    setPhotoMeta(null)
     startCamera()
   }
 
@@ -61,6 +96,11 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
         <>
           <img src={photo} alt="proof" style={s.preview} />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
+          {photoMeta && (
+            <div style={s.meta}>
+              {photoMeta.width}×{photoMeta.height}px · {photoMeta.sizeKB}KB · quality {photoMeta.quality}%
+            </div>
+          )}
           <div style={s.btnRow}>
             <button style={{ ...s.btn, ...s.retake }} onClick={retake}>🔄 Retake</button>
           </div>

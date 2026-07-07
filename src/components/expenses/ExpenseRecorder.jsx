@@ -13,6 +13,8 @@ const s = {
   wrap: { padding: 24, maxWidth: 680, margin: '0 auto' },
   title: { color: '#ec4899', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
+  tabs: { display: 'flex', gap: 8, marginBottom: 20 },
+  tab: (active) => ({ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', background: active ? '#ec4899' : '#1e293b', color: active ? '#fff' : '#64748b' }),
   form: { background: '#1e293b', borderRadius: 12, padding: 20, border: '1px solid #334155', marginBottom: 20 },
   formTitle: { color: '#e2e8f0', fontWeight: 700, marginBottom: 14 },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 },
@@ -26,25 +28,27 @@ const s = {
   expName: { color: '#e2e8f0', fontWeight: 600, fontSize: '0.9rem' },
   expMeta: { color: '#64748b', fontSize: '0.75rem', marginTop: 2 },
   amount: { color: '#4ade80', fontWeight: 800, fontSize: '1rem', flexShrink: 0 },
-  badge: (s) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: STATUS_BG[s], color: STATUS_COLOR[s] }),
+  badge: (st) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: STATUS_BG[st] || STATUS_BG.pending, color: STATUS_COLOR[st] || STATUS_COLOR.pending }),
   thumb: { width: 50, height: 50, objectFit: 'cover', borderRadius: 6 },
   approveBtn: (c) => ({ padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: c === 'green' ? '#16a34a' : '#dc2626', color: '#fff', marginLeft: 4 }),
+  empty: { color: '#475569', padding: '20px 0' },
 }
 
 export default function ExpenseRecorder() {
   const { user, profile } = useAuth()
   const isManager = profile?.role === 'manager'
+  const [tab, setTab] = useState('submit')
   const [expenses, setExpenses] = useState([])
   const [form, setForm] = useState({ description: '', amount: '', category: 'Travel', date: today(), notes: '' })
   const [photo, setPhoto] = useState(null)
   const [saving, setSaving] = useState(false)
 
   async function loadExpenses() {
-    const list = isManager ? await getAllExpenses() : await getMyExpenses(user.uid)
+    const list = isManager && tab === 'approve' ? await getAllExpenses() : await getMyExpenses(user.uid)
     setExpenses(list)
   }
 
-  useEffect(() => { loadExpenses() }, [user.uid])
+  useEffect(() => { loadExpenses() }, [user.uid, tab])
 
   function setField(k, v) { setForm(prev => ({ ...prev, [k]: v })) }
 
@@ -54,13 +58,11 @@ export default function ExpenseRecorder() {
     setSaving(true)
     try {
       let receiptUrl = null
-      if (photo) {
-        receiptUrl = await uploadPhoto(expensePhotoPath(user.uid), photo)
-      }
+      if (photo) receiptUrl = await uploadPhoto(expensePhotoPath(user.uid), photo)
       await saveExpense(user.uid, profile?.name || user.email, { ...form, amount: parseFloat(form.amount), receiptUrl })
       setForm({ description: '', amount: '', category: 'Travel', date: today(), notes: '' })
       setPhoto(null)
-      await loadExpenses()
+      if (tab === 'submit') await loadExpenses()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -73,19 +75,31 @@ export default function ExpenseRecorder() {
     await loadExpenses()
   }
 
+  const pendingCount = expenses.filter(e => e.status === 'pending').length
+
   return (
     <div style={s.wrap}>
-      <div style={s.title}>🧾 {isManager ? 'Expense Approvals' : 'My Expenses'}</div>
-      <div style={s.sub}>{isManager ? 'Review and approve employee expense claims' : 'Record work-related expenses for reimbursement'}</div>
+      <div style={s.title}>🧾 Expenses</div>
+      <div style={s.sub}>{isManager ? 'Submit your own expenses or review team submissions' : 'Record work-related expenses for reimbursement'}</div>
 
-      {!isManager && (
+      {isManager && (
+        <div style={s.tabs}>
+          <button style={s.tab(tab === 'submit')} onClick={() => setTab('submit')}>+ Submit Expense</button>
+          <button style={s.tab(tab === 'approve')} onClick={() => setTab('approve')}>
+            Approve / Review {pendingCount > 0 && `(${pendingCount} pending)`}
+          </button>
+          <button style={s.tab(tab === 'mine')} onClick={() => setTab('mine')}>My Expenses</button>
+        </div>
+      )}
+
+      {(tab === 'submit' || !isManager) && (
         <div style={s.form}>
           <div style={s.formTitle}>+ New Expense</div>
           <form onSubmit={handleSubmit}>
             <div style={s.row}>
               <div style={s.field}>
                 <label style={s.label}>Description *</label>
-                <input style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder="What was the expense for?" required />
+                <input style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder="What was this for?" required />
               </div>
               <div style={s.field}>
                 <label style={s.label}>Amount (₹) *</label>
@@ -114,31 +128,33 @@ export default function ExpenseRecorder() {
         </div>
       )}
 
-      <div style={s.list}>
-        {expenses.length === 0 && <div style={{ color: '#475569' }}>No expenses recorded yet.</div>}
-        {expenses.map(exp => (
-          <div key={exp.id} style={s.card}>
-            <div style={{ flex: 1 }}>
-              <div style={s.expName}>{exp.description}</div>
-              <div style={s.expMeta}>{exp.category} · {exp.date} {isManager && `· ${exp.userName}`}</div>
-              {exp.notes && <div style={{ ...s.expMeta, marginTop: 2 }}>{exp.notes}</div>}
-              <div style={{ marginTop: 6 }}>
-                <span style={s.badge(exp.status)}>{exp.status?.toUpperCase()}</span>
-                {isManager && exp.status === 'pending' && (
-                  <>
-                    <button style={s.approveBtn('green')} onClick={() => handleStatus(exp.id, 'approved')}>✔ Approve</button>
-                    <button style={s.approveBtn('red')} onClick={() => handleStatus(exp.id, 'rejected')}>✘ Reject</button>
-                  </>
-                )}
+      {(tab === 'approve' || tab === 'mine' || !isManager) && (
+        <div style={s.list}>
+          {expenses.length === 0 && <div style={s.empty}>No expenses found.</div>}
+          {expenses.map(exp => (
+            <div key={exp.id} style={s.card}>
+              <div style={{ flex: 1 }}>
+                <div style={s.expName}>{exp.description}</div>
+                <div style={s.expMeta}>{exp.category} · {exp.date}{(isManager && tab === 'approve') ? ` · ${exp.userName}` : ''}</div>
+                {exp.notes && <div style={{ ...s.expMeta, marginTop: 2 }}>{exp.notes}</div>}
+                <div style={{ marginTop: 6 }}>
+                  <span style={s.badge(exp.status)}>{exp.status?.toUpperCase()}</span>
+                  {isManager && tab === 'approve' && exp.status === 'pending' && (
+                    <>
+                      <button style={s.approveBtn('green')} onClick={() => handleStatus(exp.id, 'approved')}>✔ Approve</button>
+                      <button style={s.approveBtn('red')} onClick={() => handleStatus(exp.id, 'rejected')}>✘ Reject</button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={s.amount}>₹{parseFloat(exp.amount).toFixed(2)}</div>
+                {exp.receiptUrl && <img src={exp.receiptUrl} alt="receipt" style={s.thumb} />}
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={s.amount}>₹{parseFloat(exp.amount).toFixed(2)}</div>
-              {exp.receiptUrl && <img src={exp.receiptUrl} alt="receipt" style={s.thumb} />}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
