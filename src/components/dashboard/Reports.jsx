@@ -4,6 +4,7 @@ import { db } from '../../firebase/config'
 import DateInput from '../shared/DateInput'
 import { fmtDate, todayISO, daysAgoISO } from '../../utils/dateUtils'
 import TaskVerificationReport from '../reports/TaskVerificationReport'
+import { loadSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
@@ -70,12 +71,13 @@ export default function Reports() {
     setLoading(true)
     setError(null)
     try {
-      const [attendance, sales, expenses] = await Promise.all([
+      const [attendance, sales, expenses, settings] = await Promise.all([
         fetchCollection('attendance', from, to),
         fetchCollection('sales', from, to),
         fetchExpensesInRange(from, to),
+        loadSettings(),
       ])
-      setData(buildReport(attendance, sales, expenses, from, to))
+      setData(buildReport(attendance, sales, expenses, from, to, settings))
     } catch (err) {
       console.error('Reports fetch error:', err)
       setError(err.message)
@@ -254,9 +256,15 @@ async function fetchExpensesInRange(from, to) {
 
 // ── Report builder ────────────────────────────────────────────────────────────
 
-function buildReport(attendance, sales, expenses, from, to) {
+function buildReport(attendance, sales, expenses, from, to, settings = DEFAULT_SETTINGS) {
   const days = dateRange(from, to)
   const totalDays = days.length
+
+  const [startH, startM] = (settings.shopStartTime || '09:00').split(':').map(Number)
+  const [endH, endM]     = (settings.shopEndTime   || '21:00').split(':').map(Number)
+  const shopStartMins = startH * 60 + startM
+  const shopEndMins   = endH   * 60 + endM
+  const ON_TIME_GRACE = 15  // minutes after shop start still counts as on-time
 
   const salesMap = {}
   sales.forEach(r => {
@@ -292,29 +300,38 @@ function buildReport(attendance, sales, expenses, from, to) {
     empMap[r.userName].records.push(r)
   })
   const attendanceByEmployee = Object.entries(empMap).map(([name, { records }]) => {
-    // Count unique dates — multiple sessions on the same day = 1 day present
-    const presentDates = new Set(records.map(r => r.date))
+    // Count unique dates — multiple sessions on the same day = 1 day present.
+    // Only count dates where check-in fell within the shop's operating window.
+    const presentDates = new Set()
+    records.forEach(r => {
+      if (!r.checkIn) return
+      const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
+      const ciMins = ci.getHours() * 60 + ci.getMinutes()
+      if (ciMins <= shopEndMins) presentDates.add(r.date)
+    })
     const present = presentDates.size
     const absent = Math.max(0, totalDays - present)
     const pct = Math.round((present / totalDays) * 100)
 
-    // On-time: unique days where any check-in was before 09:15
+    // On-time: unique days where the earliest check-in was within grace period of shop start
     const onTimeDates = new Set()
     records.forEach(r => {
       if (!r.checkIn) return
       const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
-      if (ci.getHours() < 9 || (ci.getHours() === 9 && ci.getMinutes() <= 15)) {
-        onTimeDates.add(r.date)
-      }
+      const ciMins = ci.getHours() * 60 + ci.getMinutes()
+      if (ciMins <= shopStartMins + ON_TIME_GRACE) onTimeDates.add(r.date)
     })
     const onTime = onTimeDates.size
 
-    // Hours: sum all completed sessions per day, then derive total + avg across days
+    // Hours: sum all completed sessions per day, then derive total + avg across days.
+    // Only include sessions where check-in is within shop hours.
     const hoursByDate = {}
     records.forEach(r => {
       if (!r.checkIn || !r.checkOut) return
       const ci = r.checkIn.toDate ? r.checkIn.toDate() : new Date(r.checkIn)
       const co = r.checkOut.toDate ? r.checkOut.toDate() : new Date(r.checkOut)
+      const ciMins = ci.getHours() * 60 + ci.getMinutes()
+      if (ciMins > shopEndMins) return  // ignore sessions starting after shop close
       hoursByDate[r.date] = (hoursByDate[r.date] || 0) + (co - ci) / 3600000
     })
     const dailyHours = Object.values(hoursByDate)
