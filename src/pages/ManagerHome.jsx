@@ -2,6 +2,7 @@ import { Routes, Route, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/shared/Navbar'
 import QRGenerator from '../components/attendance/QRGenerator'
+import ShopQRPrint from '../components/attendance/ShopQRPrint'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
 import Reports from '../components/dashboard/Reports'
 import AppConfig from '../components/config/AppConfig'
@@ -150,6 +151,7 @@ export default function ManagerHome() {
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="qr" element={<QRGenerator />} />
+        <Route path="qr-print" element={<ShopQRPrint />} />
         <Route path="expenses" element={<ExpenseRecorder />} />
         <Route path="reports" element={<Reports />} />
         <Route path="employees" element={<EmployeeManagement />} />

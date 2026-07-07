@@ -99,7 +99,23 @@ export default function QRScanner() {
   async function handleScan(text) {
     try {
       const data = JSON.parse(text)
-      if (data.uid !== user.uid) {
+
+      // Shop-display QR: { action: "in"|"out", shop: "..." }
+      if (data.action) {
+        if (data.action === 'in') {
+          await checkIn(user.uid, profile?.name || user.email)
+          setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
+        } else if (data.action === 'out') {
+          const needsClosure = requireClosureForSignOut()
+          await checkOut(user.uid, needsClosure)
+          setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
+        }
+        await reload()
+        return
+      }
+
+      // Legacy employee-specific QR: { uid: "...", name: "..." }
+      if (data.uid && data.uid !== user.uid) {
         setMessage({ ok: false, text: 'QR code does not match your account.' })
         return
       }

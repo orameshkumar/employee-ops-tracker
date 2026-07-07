@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { getDocs, collection } from 'firebase/firestore'
 import { db } from '../../firebase/config'
@@ -28,6 +29,14 @@ export default function QRGenerator() {
     <div style={s.wrap}>
       <div style={s.title}>🔑 Employee QR Codes</div>
       <div style={s.sub}>Each employee scans their personal QR code to check in/out</div>
+
+      <Link
+        to="/manager/qr-print"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '9px 18px', borderRadius: 8, background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}
+      >
+        🖨️ Print Shop Check-In / Check-Out QR Codes
+      </Link>
+
       <div style={s.grid}>
         {employees.map(emp => <EmployeeQR key={emp.id} employee={emp} />)}
       </div>
