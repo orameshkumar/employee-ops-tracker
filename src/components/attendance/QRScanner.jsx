@@ -9,7 +9,7 @@ const s = {
   title: { color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
   card: { background: '#1e293b', borderRadius: 12, padding: 18, border: '1px solid #334155', marginBottom: 14 },
-  scanBox: { width: '100%', borderRadius: 8, overflow: 'hidden', marginBottom: 12 },
+  scanBox: { width: '100%', minHeight: 280, borderRadius: 8, overflow: 'visible', marginBottom: 12, background: '#000' },
   btn: (c) => ({
     padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer',
     fontWeight: 700, fontSize: '0.9rem', marginRight: 8,
