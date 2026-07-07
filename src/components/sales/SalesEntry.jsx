@@ -5,14 +5,14 @@ import { saveSales, getTodaySales } from '../../firebase/firestore'
 const ONLINE_METHODS = ['UPI / QR Pay', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet']
 
 const s = {
-  wrap: { padding: 24, maxWidth: 600, margin: '0 auto' },
+  wrap: { padding: '20px 16px', maxWidth: 600, margin: '0 auto' },
   title: { color: '#f97316', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
-  section: { background: '#1e293b', borderRadius: 12, padding: 18, border: '1px solid #334155', marginBottom: 16 },
+  section: { background: '#1e293b', borderRadius: 12, padding: '14px 16px', border: '1px solid #334155', marginBottom: 16 },
   sectionTitle: { color: '#e2e8f0', fontWeight: 700, fontSize: '0.95rem', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 },
-  row: { display: 'flex', alignItems: 'center', marginBottom: 10, gap: 12 },
-  label: { color: '#94a3b8', fontSize: '0.85rem', width: 160, flexShrink: 0 },
-  input: { flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none' },
+  row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 10 },
+  label: { color: '#94a3b8', fontSize: '0.85rem', flexShrink: 0, minWidth: 0 },
+  input: { width: 120, minWidth: 0, flexShrink: 0, padding: '8px 10px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', textAlign: 'right' },
   total: { color: '#4ade80', fontWeight: 800, fontSize: '1.1rem' },
   grandTotal: { background: '#0f2a1a', border: '1px solid #166534', borderRadius: 10, padding: 14, marginBottom: 16 },
   grandLabel: { color: '#94a3b8', fontSize: '0.85rem' },
@@ -133,7 +133,7 @@ export default function SalesEntry() {
         <div style={s.section}>
           <div style={s.sectionTitle}>📝 Notes</div>
           <textarea
-            style={{ ...s.input, width: '100%', minHeight: 70, resize: 'vertical' }}
+            style={{ width: '100%', minHeight: 70, resize: 'vertical', padding: '8px 10px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
             placeholder="Any remarks about today's sales…"
             value={notes}
             onChange={e => setNotes(e.target.value)}

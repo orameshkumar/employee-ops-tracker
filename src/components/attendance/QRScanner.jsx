@@ -9,7 +9,8 @@ const s = {
   title: { color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
   card: { background: '#1e293b', borderRadius: 12, padding: 18, border: '1px solid #334155', marginBottom: 14 },
-  scanBox: { width: '100%', minHeight: 280, borderRadius: 8, overflow: 'visible', marginBottom: 12, background: '#000' },
+  // #qr-reader must be visible in DOM — do NOT use display:none or overflow:hidden
+  scanBox: { width: '100%', minHeight: 300, borderRadius: 8, overflow: 'visible', background: '#000', position: 'relative' },
   btn: (c) => ({
     padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer',
     fontWeight: 700, fontSize: '0.9rem', marginRight: 8,
@@ -21,17 +22,13 @@ const s = {
     background: ok ? '#14532d' : '#450a0a', color: ok ? '#4ade80' : '#fca5a5',
     border: `1px solid ${ok ? '#16a34a' : '#ef4444'}`,
   }),
-  timeline: { marginTop: 10 },
   session: (open) => ({
     display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
     borderRadius: 8, marginBottom: 6, fontSize: '0.82rem',
     background: open ? '#0f2d1f' : '#0f172a',
     border: `1px solid ${open ? '#16a34a' : '#1e293b'}`,
   }),
-  dot: (open) => ({
-    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-    background: open ? '#22c55e' : '#3b82f6',
-  }),
+  dot: (open) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: open ? '#22c55e' : '#3b82f6' }),
   sessionNum: { color: '#475569', fontSize: '0.72rem', width: 20, flexShrink: 0 },
   timeLabel: { color: '#64748b', fontSize: '0.75rem' },
   timeVal: { color: '#e2e8f0', fontWeight: 600 },
@@ -46,7 +43,12 @@ export default function QRScanner() {
   const [sessions, setSessions] = useState([])
   const [scanning, setScanning] = useState(false)
   const [message, setMessage] = useState(null)
-  const scannerInstanceRef = useRef(null)
+  const scannerRef = useRef(null)
+  const [permState, setPermState] = useState('idle') // 'idle' | 'requesting' | 'granted' | 'denied'
+
+  // Keep a ref to latest state so the scanner callback doesn't use stale closures
+  const stateRef = useRef({})
+  stateRef.current = { user, profile, settings, sessions }
 
   async function reload() {
     const list = await getTodayAttendance(user.uid).catch(() => [])
@@ -55,99 +57,148 @@ export default function QRScanner() {
 
   useEffect(() => { reload() }, [user.uid])
 
+  // Explicitly request camera permission before starting the scanner.
+  // This triggers the browser's native permission prompt on iOS / Android,
+  // lets us detect denial clearly, and releases the test stream before
+  // html5-qrcode opens its own stream.
+  async function requestCameraAndScan() {
+    setMessage(null)
+    setPermState('requesting')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      stream.getTracks().forEach(t => t.stop()) // release immediately; scanner will re-open
+      setPermState('granted')
+      setScanning(true)
+    } catch (err) {
+      setPermState('denied')
+      const name = err?.name || ''
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setMessage({ ok: false, text: '🚫 Camera permission denied. Open your browser settings and allow camera access for this site, then try again.' })
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setMessage({ ok: false, text: '📷 No camera found on this device.' })
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setMessage({ ok: false, text: '📷 Camera is in use by another app. Close it and try again.' })
+      } else {
+        setMessage({ ok: false, text: `Camera error: ${err?.message || err?.name || 'Unknown'}` })
+      }
+    }
+  }
+
+  // ── Start / stop camera using useEffect so #qr-reader is guaranteed in DOM ──
+  useEffect(() => {
+    if (!scanning) return
+
+    const { user, profile, settings, sessions } = stateRef.current
+    const openSession = sessions.find(s => s.checkIn && !s.checkOut)
+    const isCheckedIn = !!openSession
+    const sessionCount = sessions.length
+
+    function requireClosure() {
+      const [eh, em] = (settings.shopEndTime || '21:00').split(':').map(Number)
+      const now = new Date()
+      return now.getHours() * 60 + now.getMinutes() >= eh * 60 + em
+    }
+
+    const qrboxSize = Math.min(250, Math.max(200, (window.innerWidth || 400) - 80))
+    const scanner = new Html5Qrcode('qr-reader')
+    scannerRef.current = scanner
+
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize } },
+      async (decodedText) => {
+        try { await scanner.stop() } catch (_) {}
+        scannerRef.current = null
+        setScanning(false)
+        setPermState('idle')
+        try {
+          const data = JSON.parse(decodedText)
+
+          // Shop QR: { action: "in" | "out" }
+          if (data.action) {
+            if (data.action === 'in') {
+              await checkIn(user.uid, profile?.name || user.email)
+              setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
+            } else if (data.action === 'out') {
+              const needsClosure = requireClosure()
+              await checkOut(user.uid, needsClosure)
+              setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
+            }
+            reload()
+            return
+          }
+
+          // Legacy per-employee QR: { uid, name }
+          if (data.uid && data.uid !== user.uid) {
+            setMessage({ ok: false, text: 'QR code does not match your account.' })
+            return
+          }
+          if (!isCheckedIn) {
+            await checkIn(user.uid, profile?.name || user.email)
+            setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
+          } else {
+            const needsClosure = requireClosure()
+            await checkOut(user.uid, needsClosure)
+            setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
+          }
+          reload()
+        } catch (err) {
+          setMessage({ ok: false, text: err.message })
+        }
+      },
+      () => {} // frame error — ignore
+    ).catch(err => {
+      console.error('Camera error:', err)
+      scannerRef.current = null
+      setScanning(false)
+      setPermState('idle')
+      const msg = err?.message?.toLowerCase() || ''
+      if (msg.includes('permission') || msg.includes('notallowed')) {
+        setMessage({ ok: false, text: '🚫 Camera permission denied. Allow camera access in your browser settings and try again.' })
+      } else if (msg.includes('notfound') || msg.includes('devicenotfound')) {
+        setMessage({ ok: false, text: '📷 No camera found on this device.' })
+      } else {
+        setMessage({ ok: false, text: `Camera error: ${err?.message || 'Unknown error'}` })
+      }
+    })
+
+    // Cleanup: stop camera when scanning becomes false or component unmounts
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {})
+        scannerRef.current = null
+      }
+    }
+  }, [scanning]) // ← runs after DOM update — #qr-reader is guaranteed to exist
+
+  async function stopScan() {
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop() } catch (_) {}
+      scannerRef.current = null
+    }
+    setScanning(false)
+    setPermState('idle')
+  }
+
   const openSession = sessions.find(s => s.checkIn && !s.checkOut)
   const isCheckedIn = !!openSession
   const sessionCount = sessions.length
 
-  // Determine if closure tasks should be required for this sign-out
   function requireClosureForSignOut() {
-    const endTime = settings.shopEndTime || '21:00'
-    const [eh, em] = endTime.split(':').map(Number)
+    const [eh, em] = (settings.shopEndTime || '21:00').split(':').map(Number)
     const now = new Date()
-    const nowMins = now.getHours() * 60 + now.getMinutes()
-    const endMins = eh * 60 + em
-    return nowMins >= endMins
+    return now.getHours() * 60 + now.getMinutes() >= eh * 60 + em
   }
 
   const isPastShopEnd = requireClosureForSignOut()
   const closureReady = openSession?.closureComplete === true
-
-  async function startScan() {
-    setScanning(true)
-    setMessage(null)
-    setTimeout(() => {
-      const scanner = new Html5Qrcode('qr-reader')
-      scannerInstanceRef.current = scanner
-      scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: 220 },
-        async (decodedText) => {
-          try { await scanner.stop() } catch (e) { console.error(e) }
-          scannerInstanceRef.current = null
-          setScanning(false)
-          await handleScan(decodedText)
-        },
-        () => {}
-      ).catch(err => {
-        console.error('Scanner start error:', err)
-        setScanning(false)
-        setMessage({ ok: false, text: 'Could not access camera. Please check permissions.' })
-      })
-    }, 300)
-  }
-
-  async function handleScan(text) {
-    try {
-      const data = JSON.parse(text)
-
-      // Shop-display QR: { action: "in"|"out", shop: "..." }
-      if (data.action) {
-        if (data.action === 'in') {
-          await checkIn(user.uid, profile?.name || user.email)
-          setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
-        } else if (data.action === 'out') {
-          const needsClosure = requireClosureForSignOut()
-          await checkOut(user.uid, needsClosure)
-          setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
-        }
-        await reload()
-        return
-      }
-
-      // Legacy employee-specific QR: { uid: "...", name: "..." }
-      if (data.uid && data.uid !== user.uid) {
-        setMessage({ ok: false, text: 'QR code does not match your account.' })
-        return
-      }
-      if (!isCheckedIn) {
-        await checkIn(user.uid, profile?.name || user.email)
-        setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
-      } else {
-        const needsClosure = requireClosureForSignOut()
-        await checkOut(user.uid, needsClosure)
-        setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
-      }
-      await reload()
-    } catch (err) {
-      setMessage({ ok: false, text: err.message })
-    }
-  }
-
-  async function stopScan() {
-    if (scannerInstanceRef.current) {
-      try { await scannerInstanceRef.current.stop() } catch (e) { console.error(e) }
-      scannerInstanceRef.current = null
-    }
-    setScanning(false)
-  }
-
   const startTime = settings.shopStartTime || '09:00'
   const endTime = settings.shopEndTime || '21:00'
 
   return (
     <div style={s.wrap}>
       <div style={s.title}>📲 QR Attendance</div>
-      <div style={s.sub}>Scan your QR code to check in or out. Multiple sessions supported.</div>
+      <div style={s.sub}>Scan the shop QR code to check in or out. Multiple sessions supported.</div>
 
       <div style={s.card}>
         <div style={s.shopHours}>
@@ -171,7 +222,7 @@ export default function QRScanner() {
           </div>
         )}
 
-        <div style={s.timeline}>
+        <div>
           {sessions.length === 0 && (
             <div style={{ color: '#475569', fontSize: '0.82rem' }}>No sessions recorded today yet.</div>
           )}
@@ -201,9 +252,7 @@ export default function QRScanner() {
                 </div>
                 {open && <span style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>ACTIVE</span>}
                 {!open && sess.checkOut && (
-                  <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>
-                    {duration(sess.checkIn, sess.checkOut)}
-                  </span>
+                  <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>{duration(sess.checkIn, sess.checkOut)}</span>
                 )}
               </div>
             )
@@ -211,31 +260,40 @@ export default function QRScanner() {
         </div>
       </div>
 
+      {/* Scan button */}
       {!scanning && (
         <div style={{ display: 'flex', gap: 10 }}>
           {!isCheckedIn && (
-            <button style={s.btn('green')} onClick={startScan}>📷 Scan Check-In</button>
+            <button
+              style={s.btn('green')}
+              onClick={requestCameraAndScan}
+              disabled={permState === 'requesting'}
+            >
+              {permState === 'requesting' ? '⏳ Requesting camera…' : '📷 Scan Check-In'}
+            </button>
           )}
           {isCheckedIn && (
             <button
               style={s.btn(isPastShopEnd && !closureReady ? 'gray' : 'red')}
-              onClick={isPastShopEnd && !closureReady ? undefined : startScan}
-              disabled={isPastShopEnd && !closureReady}
+              onClick={isPastShopEnd && !closureReady ? undefined : requestCameraAndScan}
+              disabled={(isPastShopEnd && !closureReady) || permState === 'requesting'}
               title={isPastShopEnd && !closureReady ? 'Complete closure tasks first' : ''}
             >
-              📷 Scan Check-Out{isPastShopEnd ? ' (Final)' : ' (Break)'}
+              {permState === 'requesting' ? '⏳ Requesting camera…' : `📷 Scan Check-Out${isPastShopEnd ? ' (Final)' : ' (Break)'}`}
             </button>
           )}
         </div>
       )}
 
+      {/* Camera view — rendered when scanning is true so #qr-reader exists in DOM
+          when the useEffect fires. Do NOT hide with display:none or overflow:hidden. */}
       {scanning && (
         <div style={s.card}>
           <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: 8 }}>
-            📸 Scanning for {isCheckedIn ? 'Check-Out' : 'Check-In'}…
+            📸 Point camera at the shop QR code…
           </div>
           <div id="qr-reader" style={s.scanBox} />
-          <button style={{ ...s.btn('gray'), marginTop: 8 }} onClick={stopScan}>Cancel</button>
+          <button style={{ ...s.btn('gray'), marginTop: 10 }} onClick={stopScan}>✕ Cancel</button>
         </div>
       )}
 
@@ -260,10 +318,8 @@ function fmt12(timeStr) {
 function elapsed(checkInTs) {
   if (!checkInTs) return ''
   const start = checkInTs.toDate ? checkInTs.toDate() : new Date(checkInTs)
-  const diffMs = Date.now() - start.getTime()
-  const mins = Math.floor(diffMs / 60000)
-  if (mins < 60) return `${mins}m`
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+  const mins = Math.floor((Date.now() - start.getTime()) / 60000)
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
 function duration(inTs, outTs) {
@@ -271,6 +327,5 @@ function duration(inTs, outTs) {
   const start = inTs.toDate ? inTs.toDate() : new Date(inTs)
   const end = outTs.toDate ? outTs.toDate() : new Date(outTs)
   const mins = Math.round((end - start) / 60000)
-  if (mins < 60) return `${mins}m`
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
 }

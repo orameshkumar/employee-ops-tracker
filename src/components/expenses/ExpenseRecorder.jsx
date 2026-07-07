@@ -12,18 +12,18 @@ const STATUS_COLOR = { pending: '#fbbf24', approved: '#4ade80', rejected: '#f871
 const STATUS_BG = { pending: '#3b2a00', approved: '#14532d', rejected: '#450a0a' }
 
 const s = {
-  wrap: { padding: 24, maxWidth: 680, margin: '0 auto' },
+  wrap: { padding: '20px 16px', maxWidth: 680, margin: '0 auto' },
   title: { color: '#ec4899', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
   tabs: { display: 'flex', gap: 8, marginBottom: 20 },
   tab: (active) => ({ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', background: active ? '#ec4899' : '#1e293b', color: active ? '#fff' : '#64748b' }),
   form: { background: '#1e293b', borderRadius: 12, padding: 20, border: '1px solid #334155', marginBottom: 20 },
   formTitle: { color: '#e2e8f0', fontWeight: 700, marginBottom: 14 },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 },
+  row: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 12 },
   field: { display: 'flex', flexDirection: 'column', gap: 4 },
   label: { color: '#94a3b8', fontSize: '0.8rem' },
-  input: { padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none' },
-  select: { padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem' },
+  input: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' },
+  select: { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', boxSizing: 'border-box' },
   btn: { width: '100%', padding: 11, borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, background: '#ec4899', color: '#fff', marginTop: 10 },
   list: { display: 'flex', flexDirection: 'column', gap: 10 },
   card: { background: '#1e293b', borderRadius: 10, padding: 14, border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
