@@ -5,6 +5,7 @@ import { uploadPhoto, expensePhotoPath } from '../../firebase/storage'
 import PhotoCapture from '../shared/PhotoCapture'
 import DateInput from '../shared/DateInput'
 import { fmtDate, todayISO } from '../../utils/dateUtils'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
@@ -38,6 +39,7 @@ const s = {
 
 export default function ExpenseRecorder() {
   const { user, profile } = useAuth()
+  const { t } = useLanguage()
   const isManager = profile?.role === 'manager'
   const [tab, setTab] = useState('submit')
   const [expenses, setExpenses] = useState([])
@@ -56,7 +58,7 @@ export default function ExpenseRecorder() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.description || !form.amount) return alert('Fill in description and amount.')
+    if (!form.description || !form.amount) return alert(t('expense_fill_alert'))
     setSaving(true)
     try {
       let receiptUrl = null
@@ -81,58 +83,58 @@ export default function ExpenseRecorder() {
 
   return (
     <div style={s.wrap}>
-      <div style={s.title}>🧾 Expenses</div>
-      <div style={s.sub}>{isManager ? 'Submit your own expenses or review team submissions' : 'Record work-related expenses for reimbursement'}</div>
+      <div style={s.title}>{t('expense_title')}</div>
+      <div style={s.sub}>{isManager ? t('expense_sub_manager') : t('expense_sub_employee')}</div>
 
       {isManager && (
         <div style={s.tabs}>
-          <button style={s.tab(tab === 'submit')} onClick={() => setTab('submit')}>+ Submit Expense</button>
+          <button style={s.tab(tab === 'submit')} onClick={() => setTab('submit')}>{t('expense_tab_submit')}</button>
           <button style={s.tab(tab === 'approve')} onClick={() => setTab('approve')}>
-            Approve / Review {pendingCount > 0 && `(${pendingCount} pending)`}
+            {t('expense_tab_approve')} {pendingCount > 0 && `(${pendingCount})`}
           </button>
-          <button style={s.tab(tab === 'mine')} onClick={() => setTab('mine')}>My Expenses</button>
+          <button style={s.tab(tab === 'mine')} onClick={() => setTab('mine')}>{t('expense_tab_mine')}</button>
         </div>
       )}
 
       {(tab === 'submit' || !isManager) && (
         <div style={s.form}>
-          <div style={s.formTitle}>+ New Expense</div>
+          <div style={s.formTitle}>{t('expense_new')}</div>
           <form onSubmit={handleSubmit}>
             <div style={s.row}>
               <div style={s.field}>
-                <label style={s.label}>Description *</label>
-                <input style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder="What was this for?" required />
+                <label style={s.label}>{t('expense_desc_label')}</label>
+                <input style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder={t('expense_desc_placeholder')} required />
               </div>
               <div style={s.field}>
-                <label style={s.label}>Amount (₹) *</label>
+                <label style={s.label}>{t('expense_amount_label')}</label>
                 <input style={s.input} type="number" min="0" step="0.01" value={form.amount} onChange={e => setField('amount', e.target.value)} placeholder="0.00" required />
               </div>
             </div>
             <div style={s.row}>
               <div style={s.field}>
-                <label style={s.label}>Category</label>
+                <label style={s.label}>{t('expense_category_label')}</label>
                 <select style={s.select} value={form.category} onChange={e => setField('category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div style={s.field}>
-                <label style={s.label}>Date</label>
+                <label style={s.label}>{t('expense_date_label')}</label>
                 <DateInput style={s.input} value={form.date} onChange={e => setField('date', e.target.value)} />
               </div>
             </div>
             <div style={s.field}>
-              <label style={s.label}>Notes</label>
-              <input style={s.input} value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder="Optional notes…" />
+              <label style={s.label}>{t('expense_notes_label')}</label>
+              <input style={s.input} value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder={t('expense_notes_placeholder')} />
             </div>
-            <PhotoCapture label="Attach Receipt Photo (optional)" onPhoto={setPhoto} />
-            <button style={s.btn} type="submit" disabled={saving}>{saving ? 'Saving…' : '💾 Submit Expense'}</button>
+            <PhotoCapture label={t('expense_receipt_label')} onPhoto={setPhoto} />
+            <button style={s.btn} type="submit" disabled={saving}>{saving ? t('common_saving') : t('expense_submit_btn')}</button>
           </form>
         </div>
       )}
 
       {(tab === 'approve' || tab === 'mine' || !isManager) && (
         <div style={s.list}>
-          {expenses.length === 0 && <div style={s.empty}>No expenses found.</div>}
+          {expenses.length === 0 && <div style={s.empty}>{t('expense_empty')}</div>}
           {expenses.map(exp => (
             <div key={exp.id} style={s.card}>
               <div style={{ flex: 1 }}>
@@ -143,8 +145,8 @@ export default function ExpenseRecorder() {
                   <span style={s.badge(exp.status)}>{exp.status?.toUpperCase()}</span>
                   {isManager && tab === 'approve' && exp.status === 'pending' && (
                     <>
-                      <button style={s.approveBtn('green')} onClick={() => handleStatus(exp.id, 'approved')}>✔ Approve</button>
-                      <button style={s.approveBtn('red')} onClick={() => handleStatus(exp.id, 'rejected')}>✘ Reject</button>
+                      <button style={s.approveBtn('green')} onClick={() => handleStatus(exp.id, 'approved')}>{t('expense_approve_btn')}</button>
+                      <button style={s.approveBtn('red')} onClick={() => handleStatus(exp.id, 'rejected')}>{t('expense_reject_btn')}</button>
                     </>
                   )}
                 </div>

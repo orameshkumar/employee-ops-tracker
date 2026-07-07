@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { checkIn, checkOut, getTodayAttendance } from '../../firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppSettings } from '../../hooks/useAppSettings'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const s = {
   wrap: { padding: 24, maxWidth: 520, margin: '0 auto' },
@@ -41,6 +42,7 @@ const s = {
 export default function QRScanner() {
   const { user, profile } = useAuth()
   const { settings } = useAppSettings()
+  const { t } = useLanguage()
   const [sessions, setSessions] = useState([])
   const [scanning, setScanning] = useState(false)
   const [message, setMessage] = useState(null)
@@ -258,29 +260,27 @@ export default function QRScanner() {
 
   return (
     <div style={s.wrap}>
-      <div style={s.title}>📲 QR Attendance</div>
-      <div style={s.sub}>Scan the shop QR code to check in or out. Multiple sessions supported.</div>
+      <div style={s.title}>{t('qr_title')}</div>
+      <div style={s.sub}>{t('qr_sub')}</div>
 
       <div style={s.card}>
         <div style={s.shopHours}>
           <div style={s.hourItem}>
-            <div style={s.timeLabel}>Shop Opens</div>
+            <div style={s.timeLabel}>{t('qr_shop_opens')}</div>
             <div style={{ ...s.timeVal, color: '#38bdf8' }}>{fmt12(startTime)}</div>
           </div>
           <div style={s.hourItem}>
-            <div style={s.timeLabel}>Shop Closes</div>
+            <div style={s.timeLabel}>{t('qr_shop_closes')}</div>
             <div style={{ ...s.timeVal, color: '#f97316' }}>{fmt12(endTime)}</div>
           </div>
           <div style={s.hourItem}>
-            <div style={s.timeLabel}>Sessions Today</div>
+            <div style={s.timeLabel}>{t('qr_sessions_today')}</div>
             <div style={{ ...s.timeVal, color: '#a855f7' }}>{sessionCount}</div>
           </div>
         </div>
 
         {isPastShopEnd && isCheckedIn && !closureReady && (
-          <div style={s.warningBox}>
-            ⚠️ It's past closing time. Complete <strong>Closure Tasks</strong> before scanning out.
-          </div>
+          <div style={s.warningBox}>{t('qr_warning_closure')}</div>
         )}
 
         <div>
@@ -321,14 +321,12 @@ export default function QRScanner() {
         </div>
       </div>
 
-      {/* Progress / error message — shown right above the button so it's always visible */}
       {message && (
         <div style={s.msg(message.ok)}>
           {message.text.split('\n').map((line, i) => <div key={i}>{line || <br />}</div>)}
         </div>
       )}
 
-      {/* Scan button */}
       {!scanning && (
         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
           {!isCheckedIn && (
@@ -337,19 +335,19 @@ export default function QRScanner() {
               onClick={requestCameraAndScan}
               disabled={permState === 'requesting'}
             >
-              {permState === 'requesting' ? '⏳ Requesting camera…' : '📷 Scan Check-In'}
+              {permState === 'requesting' ? t('qr_requesting') : t('qr_scan_in')}
             </button>
           )}
           {isCheckedIn && (
             <button
               style={s.btn(isPastShopEnd && !closureReady ? 'gray' : 'red')}
               onClick={isPastShopEnd && !closureReady
-                ? () => setMessage({ ok: false, text: '⚠️ Complete Closure Tasks before checking out.\n\nGo to Closure Tasks, finish the checklist, then come back to scan out.' })
+                ? () => setMessage({ ok: false, text: t('qr_err_closure') })
                 : requestCameraAndScan}
               disabled={permState === 'requesting'}
               title={isPastShopEnd && !closureReady ? 'Complete closure tasks first' : ''}
             >
-              {permState === 'requesting' ? '⏳ Requesting camera…' : `📷 Scan Check-Out${isPastShopEnd ? ' (Final)' : ' (Break)'}`}
+              {permState === 'requesting' ? t('qr_requesting') : (isPastShopEnd ? t('qr_scan_out_final') : t('qr_scan_out_break'))}
             </button>
           )}
         </div>
@@ -360,10 +358,10 @@ export default function QRScanner() {
       {scanning && (
         <div style={s.card}>
           <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: 8 }}>
-            📸 Point camera at the shop QR code…
+            {t('qr_pointing')}
           </div>
           <div id="qr-reader" style={s.scanBox} />
-          <button style={{ ...s.btn('gray'), marginTop: 10 }} onClick={stopScan}>✕ Cancel</button>
+          <button style={{ ...s.btn('gray'), marginTop: 10 }} onClick={stopScan}>{t('qr_cancel')}</button>
         </div>
       )}
 

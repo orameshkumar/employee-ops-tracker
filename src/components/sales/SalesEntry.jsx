@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { saveSales, getTodaySales } from '../../firebase/firestore'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const ONLINE_METHODS = ['UPI / QR Pay', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet']
 
@@ -25,6 +26,7 @@ const s = {
 
 export default function SalesEntry() {
   const { user, profile } = useAuth()
+  const { t } = useLanguage()
   const [existingSales, setExistingSales] = useState(null)
   const [online, setOnline] = useState(Object.fromEntries(ONLINE_METHODS.map(m => [m, ''])))
   const [cash, setCash] = useState('')
@@ -62,21 +64,21 @@ export default function SalesEntry() {
   if (existingSales) {
     return (
       <div style={s.wrap}>
-        <div style={s.title}>💰 End of Day Sales</div>
-        <div style={s.sub}>Today's sales have been recorded</div>
+        <div style={s.title}>{t('sales_title')}</div>
+        <div style={s.sub}>{t('sales_recorded_sub')}</div>
         <div style={s.saved}>
-          <div style={s.savedTitle}>✅ Sales Recorded</div>
-          <div style={s.savedRow}>Online Total: ₹{existingSales.onlineTotal?.toFixed(2)}</div>
+          <div style={s.savedTitle}>{t('sales_recorded_title')}</div>
+          <div style={s.savedRow}>{t('sales_online_total')}: ₹{existingSales.onlineTotal?.toFixed(2)}</div>
           {ONLINE_METHODS.map(m => existingSales.onlineSales?.[m] > 0 && (
             <div key={m} style={{ ...s.savedRow, paddingLeft: 12, color: '#6ee7b7' }}>
               {m}: ₹{parseFloat(existingSales.onlineSales[m]).toFixed(2)}
             </div>
           ))}
-          <div style={s.savedRow}>Cash: ₹{existingSales.cashSales?.toFixed(2)}</div>
+          <div style={s.savedRow}>{t('sales_cash_saved')} ₹{existingSales.cashSales?.toFixed(2)}</div>
           <div style={{ ...s.savedRow, fontSize: '1rem', fontWeight: 700, color: '#4ade80' }}>
-            Grand Total: ₹{existingSales.grandTotal?.toFixed(2)}
+            {t('sales_grand_total')}: ₹{existingSales.grandTotal?.toFixed(2)}
           </div>
-          {existingSales.notes && <div style={{ ...s.savedRow, color: '#94a3b8' }}>Notes: {existingSales.notes}</div>}
+          {existingSales.notes && <div style={{ ...s.savedRow, color: '#94a3b8' }}>{t('sales_notes_saved')} {existingSales.notes}</div>}
         </div>
       </div>
     )
@@ -84,11 +86,11 @@ export default function SalesEntry() {
 
   return (
     <div style={s.wrap}>
-      <div style={s.title}>💰 End of Day Sales</div>
-      <div style={s.sub}>Record today's online and cash sales</div>
+      <div style={s.title}>{t('sales_title')}</div>
+      <div style={s.sub}>{t('sales_sub')}</div>
       <form onSubmit={handleSubmit}>
         <div style={s.section}>
-          <div style={s.sectionTitle}>🌐 Online Sales</div>
+          <div style={s.sectionTitle}>{t('sales_online_section')}</div>
           {ONLINE_METHODS.map(method => (
             <div key={method} style={s.row}>
               <span style={s.label}>{method}</span>
@@ -104,15 +106,15 @@ export default function SalesEntry() {
             </div>
           ))}
           <div style={{ ...s.row, borderTop: '1px solid #334155', paddingTop: 10, marginTop: 4 }}>
-            <span style={s.label}>Online Total</span>
+            <span style={s.label}>{t('sales_online_total')}</span>
             <span style={s.total}>₹ {onlineTotal.toFixed(2)}</span>
           </div>
         </div>
 
         <div style={s.section}>
-          <div style={s.sectionTitle}>💵 Cash Sales</div>
+          <div style={s.sectionTitle}>{t('sales_cash_section')}</div>
           <div style={s.row}>
-            <span style={s.label}>Total Cash</span>
+            <span style={s.label}>{t('sales_total_cash')}</span>
             <input
               style={s.input}
               type="number"
@@ -126,22 +128,22 @@ export default function SalesEntry() {
         </div>
 
         <div style={s.grandTotal}>
-          <div style={s.grandLabel}>Grand Total (Online + Cash)</div>
+          <div style={s.grandLabel}>{t('sales_grand_label')}</div>
           <div style={s.grandVal}>₹ {grandTotal.toFixed(2)}</div>
         </div>
 
         <div style={s.section}>
-          <div style={s.sectionTitle}>📝 Notes</div>
+          <div style={s.sectionTitle}>{t('sales_notes_section')}</div>
           <textarea
             style={{ width: '100%', minHeight: 70, resize: 'vertical', padding: '8px 10px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-            placeholder="Any remarks about today's sales…"
+            placeholder={t('sales_notes_placeholder')}
             value={notes}
             onChange={e => setNotes(e.target.value)}
           />
         </div>
 
         <button style={s.btn} type="submit" disabled={saving}>
-          {saving ? 'Saving…' : '💾 Save Sales Record'}
+          {saving ? t('common_saving') : t('sales_save_btn')}
         </button>
       </form>
     </div>

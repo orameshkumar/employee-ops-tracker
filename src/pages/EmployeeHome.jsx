@@ -7,6 +7,7 @@ import SalesEntry from '../components/sales/SalesEntry'
 import ExpenseRecorder from '../components/expenses/ExpenseRecorder'
 import HistoryPage from '../components/history/HistoryPage'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const s = {
   page: { minHeight: '100vh', background: 'var(--app-bg, #0f172a)' },
@@ -20,27 +21,28 @@ const s = {
   tileSub: { color: 'var(--app-muted, #64748b)', fontSize: '0.75rem', marginTop: 3 },
 }
 
-const TILES = [
-  { icon: '📲', label: 'QR Attendance', sub: 'Check in / Check out', path: '/employee/qr', color: '#3b82f6' },
-  { icon: '✅', label: 'Daily Tasks', sub: 'Routine checklist', path: '/employee/tasks', color: '#22c55e' },
-  { icon: '🔒', label: 'Closure Tasks', sub: 'End of shift', path: '/employee/closure', color: '#a855f7' },
-  { icon: '💰', label: 'Sales Entry', sub: 'Online + cash', path: '/employee/sales', color: '#f97316' },
-  { icon: '🧾', label: 'Expenses', sub: 'Submit claims', path: '/employee/expenses', color: '#ec4899' },
-  { icon: '📋', label: 'History', sub: 'Sales & expenses', path: '/employee/history', color: '#06b6d4' },
+const TILE_DEFS = [
+  { icon: '📲', labelKey: 'home_tile_qr',       subKey: 'home_tile_qr_sub',       path: '/employee/qr',       color: '#3b82f6' },
+  { icon: '✅', labelKey: 'home_tile_daily',     subKey: 'home_tile_daily_sub',     path: '/employee/tasks',    color: '#22c55e' },
+  { icon: '🔒', labelKey: 'home_tile_closure',   subKey: 'home_tile_closure_sub',   path: '/employee/closure',  color: '#a855f7' },
+  { icon: '💰', labelKey: 'home_tile_sales',     subKey: 'home_tile_sales_sub',     path: '/employee/sales',    color: '#f97316' },
+  { icon: '🧾', labelKey: 'home_tile_expenses',  subKey: 'home_tile_expenses_sub',  path: '/employee/expenses', color: '#ec4899' },
+  { icon: '📋', labelKey: 'home_tile_history',   subKey: 'home_tile_history_sub',   path: '/employee/history',  color: '#06b6d4' },
 ]
 
 function Dashboard() {
   const { profile } = useAuth()
+  const { t, dateLocale } = useLanguage()
   return (
     <div style={s.dashboard}>
-      <div style={s.welcome}>👋 Hello, {profile?.name?.split(' ')[0] || 'there'}!</div>
-      <div style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      <div style={s.welcome}>👋 {t('home_greeting')}, {profile?.name?.split(' ')[0] || 'there'}!</div>
+      <div style={s.date}>{new Date().toLocaleDateString(dateLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
       <div style={s.grid}>
-        {TILES.map(t => (
-          <Link key={t.path} to={t.path} style={s.tile(t.color)}>
-            <div style={s.tileIcon}>{t.icon}</div>
-            <div style={s.tileLabel}>{t.label}</div>
-            <div style={s.tileSub}>{t.sub}</div>
+        {TILE_DEFS.map(tile => (
+          <Link key={tile.path} to={tile.path} style={s.tile(tile.color)}>
+            <div style={s.tileIcon}>{tile.icon}</div>
+            <div style={s.tileLabel}>{t(tile.labelKey)}</div>
+            <div style={s.tileSub}>{t(tile.subKey)}</div>
           </Link>
         ))}
       </div>

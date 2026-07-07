@@ -4,6 +4,7 @@ import { saveClosureTask, getTodayClosureTasks, markClosureComplete } from '../.
 import { uploadPhoto, taskPhotoPath } from '../../firebase/storage'
 import { useAppSettings } from '../../hooks/useAppSettings'
 import PhotoCapture from '../shared/PhotoCapture'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const s = {
   wrap: { padding: 24, maxWidth: 640, margin: '0 auto' },
@@ -25,6 +26,7 @@ const s = {
 export default function ClosureTasks() {
   const { user, profile } = useAuth()
   const { settings, loading: settingsLoading } = useAppSettings()
+  const { t } = useLanguage()
   const [saved, setSaved] = useState([])
   const [photoMap, setPhotoMap] = useState({})
   const [saving, setSaving] = useState({})
@@ -55,7 +57,7 @@ export default function ClosureTasks() {
 
   async function submitTask(taskName) {
     const photo = photoMap[taskName]
-    if (!photo) return alert('Please capture a photo first.')
+    if (!photo) return alert(t('common_no_photo_alert'))
     setSaving(prev => ({ ...prev, [taskName]: true }))
     try {
       const path = taskPhotoPath(user.uid, 'closure', taskName)
@@ -70,45 +72,45 @@ export default function ClosureTasks() {
     }
   }
 
-  if (settingsLoading) return <div style={{ ...s.wrap }}><div style={s.loading}>Loading tasks…</div></div>
+  if (settingsLoading) return <div style={{ ...s.wrap }}><div style={s.loading}>{t('common_loading')}</div></div>
 
   return (
     <div style={s.wrap}>
-      <div style={s.title}>🔒 Closure Tasks</div>
-      <div style={s.sub}>Complete ALL tasks before you can scan out for the day</div>
+      <div style={s.title}>{t('closure_title')}</div>
+      <div style={s.sub}>{t('closure_sub')}</div>
 
       <div style={s.progress}><div style={s.bar(pct)} /></div>
       <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: 16 }}>
-        {savedNames.length} / {taskList.length} completed ({pct}%)
+        {t('closure_progress', { done: savedNames.length, total: taskList.length, pct })}
       </div>
 
       {taskList.length === 0 ? (
         <div style={{ color: '#475569', padding: '20px 0' }}>
-          No closure tasks configured yet. Ask your manager to add tasks in ⚙ Config.
+          {t('closure_no_tasks')}
         </div>
       ) : allDone ? (
-        <div style={s.unlocked}>🔓 All closure tasks complete — QR Sign-Out is now unlocked!</div>
+        <div style={s.unlocked}>{t('closure_all_done')}</div>
       ) : (
-        <div style={s.locked}>🔒 Complete all {taskList.length} tasks to unlock QR Sign-Out</div>
+        <div style={s.locked}>{t('closure_locked', { total: taskList.length })}</div>
       )}
 
       <div style={{ marginTop: 16 }}>
         {taskList.map(taskName => {
           const isDone = savedNames.includes(taskName)
-          const doneData = saved.find(t => t.taskName === taskName)
+          const doneData = saved.find(d => d.taskName === taskName)
           return (
             <div key={taskName} style={{ ...s.card, ...(isDone ? s.completedCard : {}) }}>
               <div style={s.taskName}>{taskName}</div>
               {isDone ? (
                 <div style={s.done}>
-                  ✅ Completed
+                  {t('common_completed')}
                   {doneData?.photoUrl && <img src={doneData.photoUrl} alt="proof" style={s.thumb} />}
                 </div>
               ) : (
                 <>
-                  <PhotoCapture label="Capture photo proof" onPhoto={(d) => handlePhoto(taskName, d)} />
+                  <PhotoCapture label={t('common_capture_photo')} onPhoto={(d) => handlePhoto(taskName, d)} />
                   <button style={s.btn} onClick={() => submitTask(taskName)} disabled={saving[taskName]}>
-                    {saving[taskName] ? 'Saving…' : '✔ Mark Complete'}
+                    {saving[taskName] ? t('common_saving') : t('common_mark_complete')}
                   </button>
                 </>
               )}

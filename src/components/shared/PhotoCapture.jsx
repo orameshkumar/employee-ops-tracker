@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { loadSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const s = {
   wrap:     { marginTop: 10 },
@@ -33,7 +34,9 @@ function camErrMsg(err) {
   return { text: `Camera error: [${name}] ${err?.message || 'Unknown error'}`, fix: 'unknown' }
 }
 
-export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' }) {
+export default function PhotoCapture({ onPhoto, label }) {
+  const { t } = useLanguage()
+  const resolvedLabel = label ?? t('common_capture_photo')
   const videoRef   = useRef(null)
   const canvasRef  = useRef(null)
   const streamRef  = useRef(null)
@@ -159,11 +162,10 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
 
   return (
     <div style={s.wrap}>
-      <div style={s.label}>{label}</div>
+      <div style={s.label}>{resolvedLabel}</div>
 
-      {/* Step indicator */}
       {step === 'requesting' && (
-        <div style={s.info}>⏳ Requesting camera access — please allow when prompted…</div>
+        <div style={s.info}>{t('common_requesting_camera')}</div>
       )}
 
       {/* Error message */}
@@ -185,10 +187,10 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
       {step === 'streaming' && (
         <div style={s.btnRow}>
           <button style={{ ...s.btn, background: '#3b82f6', color: '#fff' }} onClick={capturePhoto}>
-            ✅ Capture Photo
+            {t('common_capture_btn')}
           </button>
           <button style={{ ...s.btn, background: '#475569', color: '#fff' }} onClick={() => { stopStream(); setStep('idle') }}>
-            ✕ Cancel
+            {t('common_cancel')}
           </button>
         </div>
       )}
@@ -204,7 +206,7 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
           )}
           <div style={s.btnRow}>
             <button style={{ ...s.btn, background: '#64748b', color: '#fff' }} onClick={retake}>
-              🔄 Retake
+              {t('common_retake')}
             </button>
           </div>
         </>
@@ -213,7 +215,7 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
       {/* Open camera button (idle or after error) */}
       {(step === 'idle' || step === 'error') && (
         <button style={{ ...s.btn, background: '#3b82f6', color: '#fff', marginTop: 8 }} onClick={openCamera}>
-          📷 Open Camera
+          {t('common_open_camera')}
         </button>
       )}
 

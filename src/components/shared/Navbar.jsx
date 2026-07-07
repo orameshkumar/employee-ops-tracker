@@ -4,6 +4,7 @@ import { logout } from '../../firebase/auth'
 import { useNavigate, NavLink } from 'react-router-dom'
 import { loadSettings } from '../../hooks/useAppSettings'
 import { useTheme, THEMES } from '../../contexts/ThemeContext'
+import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext'
 
 const s = {
   nav: { background: 'var(--app-surface, #1e293b)', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56, borderBottom: '1px solid var(--app-border, #334155)', flexWrap: 'wrap', gap: 4, position: 'relative' },
@@ -29,8 +30,10 @@ export default function Navbar() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const { themeKey, setTheme, theme } = useTheme()
+  const { lang, setLang, t } = useLanguage()
   const [shopName, setShopName] = useState('')
   const [showThemePicker, setShowThemePicker] = useState(false)
+  const [showLangPicker, setShowLangPicker] = useState(false)
 
   useEffect(() => { loadSettings().then(s => setShopName(s.shopName)) }, [])
 
@@ -47,18 +50,47 @@ export default function Navbar() {
       </div>
       <div style={s.links}>
         {lk(base, 'Home')}
-        {!isManager && lk(`${base}/tasks`, 'Tasks')}
-        {!isManager && lk(`${base}/closure`, 'Closure')}
-        {!isManager && lk(`${base}/sales`, 'Sales')}
-        {lk(`${base}/expenses`, 'Expenses')}
+        {!isManager && lk(`${base}/tasks`, t('nav_tasks'))}
+        {!isManager && lk(`${base}/closure`, t('nav_closure'))}
+        {!isManager && lk(`${base}/sales`, t('nav_sales'))}
+        {lk(`${base}/expenses`, t('nav_expenses'))}
         {isManager && lk(`${base}/reports`, 'Reports')}
         {isManager && lk(`${base}/config`, '⚙ Config')}
       </div>
       <div style={s.right}>
+        {/* Language picker */}
         <div style={{ position: 'relative' }}>
           <button
             style={s.themeBtn}
-            onClick={() => setShowThemePicker(p => !p)}
+            onClick={() => { setShowLangPicker(p => !p); setShowThemePicker(false) }}
+            title="Change language"
+          >
+            🌐
+          </button>
+          {showLangPicker && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowLangPicker(false)} />
+              <div style={s.themePop}>
+                <div style={{ color: '#64748b', fontSize: '0.7rem', padding: '0 12px 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Language</div>
+                {Object.entries(LANGUAGES).map(([key, l]) => (
+                  <button
+                    key={key}
+                    style={s.themeItem(lang === key)}
+                    onClick={() => { setLang(key); setShowLangPicker(false) }}
+                  >
+                    {l.flag} {l.native}
+                    {lang === key && ' ✓'}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        {/* Theme picker */}
+        <div style={{ position: 'relative' }}>
+          <button
+            style={s.themeBtn}
+            onClick={() => { setShowThemePicker(p => !p); setShowLangPicker(false) }}
             title="Change theme"
           >
             {THEMES[themeKey]?.icon || '🎨'}
@@ -68,14 +100,14 @@ export default function Navbar() {
               <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowThemePicker(false)} />
               <div style={s.themePop}>
                 <div style={{ color: '#64748b', fontSize: '0.7rem', padding: '0 12px 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Theme</div>
-                {Object.entries(THEMES).map(([key, t]) => (
+                {Object.entries(THEMES).map(([key, th]) => (
                   <button
                     key={key}
                     style={s.themeItem(themeKey === key)}
                     onClick={() => { setTheme(key); setShowThemePicker(false) }}
                   >
-                    <span style={s.dot(t.accent)} />
-                    {t.icon} {t.name}
+                    <span style={s.dot(th.accent)} />
+                    {th.icon} {th.name}
                     {themeKey === key && ' ✓'}
                   </button>
                 ))}
@@ -84,7 +116,7 @@ export default function Navbar() {
           )}
         </div>
         <span style={s.user}>{profile?.name || user?.email}</span>
-        <button style={s.btn} onClick={handleLogout}>Sign Out</button>
+        <button style={s.btn} onClick={handleLogout}>{t('nav_sign_out')}</button>
       </div>
     </nav>
   )
