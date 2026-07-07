@@ -4,20 +4,6 @@ import { checkIn, checkOut, getTodayAttendance } from '../../firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppSettings } from '../../hooks/useAppSettings'
 
-async function collectDiag() {
-  const isHttps = location.protocol === 'https:' || location.hostname === 'localhost'
-  const hasMediaDevices = !!(navigator.mediaDevices?.getUserMedia)
-  let permState = 'unknown'
-  try {
-    const p = await navigator.permissions.query({ name: 'camera' })
-    permState = p.state
-  } catch (_) {}
-  const ua = navigator.userAgent
-  const isIOS = /iphone|ipad|ipod/i.test(ua)
-  const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua)
-  return { isHttps, hasMediaDevices, permState, isIOS, isSafari, ua: ua.slice(0, 100) }
-}
-
 const s = {
   wrap: { padding: 24, maxWidth: 520, margin: '0 auto' },
   title: { color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
@@ -61,7 +47,6 @@ export default function QRScanner() {
   const scannerRef = useRef(null)
   const cameraIdRef = useRef(null) // resolved deviceId for back camera
   const [permState, setPermState] = useState('idle') // 'idle' | 'requesting' | 'granted' | 'denied'
-  const [diag, setDiag] = useState(null)
 
   // Keep a ref to latest state so the scanner callback doesn't use stale closures
   const stateRef = useRef({})
@@ -73,7 +58,6 @@ export default function QRScanner() {
   }
 
   useEffect(() => { reload() }, [user.uid])
-  useEffect(() => { collectDiag().then(setDiag) }, [])
 
   async function resolveCamera() {
     // Use enumerateDevices instead of Html5Qrcode.getCameras() — getCameras()
@@ -92,7 +76,6 @@ export default function QRScanner() {
   async function requestCameraAndScan() {
     setMessage(null)
     setPermState('requesting')
-    setMessage({ ok: null, text: '⏳ Step 1/4: Checking camera support…' })
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -101,28 +84,30 @@ export default function QRScanner() {
         return
       }
 
-      setMessage({ ok: null, text: '⏳ Step 2/4: Checking permission status…' })
-      const d = await collectDiag()
-      setDiag(d)
+      let permGranted = false
+      try {
+        const p = await navigator.permissions.query({ name: 'camera' })
+        permGranted = p.state === 'granted'
+      } catch (_) {}
 
-      if (d.permState === 'granted') {
-        setMessage({ ok: null, text: '⏳ Step 3/4: Permission already granted — resolving camera…' })
+      if (permGranted) {
         setPermState('granted')
         await resolveCamera()
-        setMessage({ ok: null, text: '⏳ Step 4/4: Starting scanner…' })
         setScanning(true)
         return
       }
 
-      setMessage({ ok: null, text: '⏳ Step 3/4: Requesting camera permission — please tap Allow…' })
+      const ua = navigator.userAgent
+      const isIOS = /iphone|ipad|ipod/i.test(ua)
+      const iosHint = isIOS
+        ? '\n\niOS fix: Settings → Safari → Camera → Allow, then reload.'
+        : '\n\nFix: tap the 🔒 icon in the address bar → allow Camera → reload.'
+
       let stream
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true })
       } catch (err) {
         const name = err?.name || ''
-        const iosHint = d.isIOS
-          ? '\n\niOS fix: Settings → Safari → Camera → Allow, then reload.'
-          : '\n\nFix: tap the 🔒 icon in the address bar → allow Camera → reload.'
         setPermState('denied')
         if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
           setMessage({ ok: false, text: `🚫 Camera permission denied. [${name}]${iosHint}` })
@@ -133,20 +118,17 @@ export default function QRScanner() {
         } else {
           setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown error'}` })
         }
-        collectDiag().then(setDiag)
         return
       }
 
       stream.getTracks().forEach(t => t.stop())
       setPermState('granted')
 
-      setMessage({ ok: null, text: '⏳ Step 4/4: Resolving camera, starting scanner…' })
       await resolveCamera()
       // Brief pause so camera hardware fully releases before html5-qrcode reopens it.
       setTimeout(() => setScanning(true), 400)
 
     } catch (outerErr) {
-      // Catch any unexpected error so the button never silently gets stuck
       console.error('requestCameraAndScan unexpected error:', outerErr)
       setPermState('idle')
       setMessage({ ok: false, text: `Unexpected error: [${outerErr?.name || 'Error'}] ${outerErr?.message || String(outerErr)}` })
@@ -156,7 +138,7 @@ export default function QRScanner() {
   // ── Start / stop camera using useEffect so #qr-reader is guaranteed in DOM ──
   useEffect(() => {
     if (!scanning) return
-    setMessage(null)  // clear "Step X/4" progress messages once scanner starts
+    setMessage(null)
 
     const { user, profile, settings, sessions } = stateRef.current
     const openSession = sessions.find(s => s.checkIn && !s.checkOut)
@@ -278,34 +260,6 @@ export default function QRScanner() {
     <div style={s.wrap}>
       <div style={s.title}>📲 QR Attendance</div>
       <div style={s.sub}>Scan the shop QR code to check in or out. Multiple sessions supported.</div>
-
-      {/* ── Camera status card — always visible ── */}
-      <div style={{ background: '#1e293b', borderRadius: 12, padding: 14, border: '1px solid #334155', marginBottom: 14 }}>
-        <div style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem', marginBottom: 10, letterSpacing: '0.05em' }}>📋 CAMERA STATUS</div>
-        {diag ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { label: 'HTTPS (required)',  ok: diag.isHttps,         val: diag.isHttps ? '✅ Yes' : '❌ No — camera needs HTTPS' },
-              { label: 'Camera API',        ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? '✅ Supported' : '❌ Not supported — try Chrome or Safari' },
-              { label: 'Permission',        ok: diag.permState === 'granted' ? true : diag.permState === 'denied' ? false : null,
-                val: diag.permState === 'granted' ? '✅ Granted' : diag.permState === 'denied' ? '❌ Denied — check browser settings' : '⚠️ ' + diag.permState },
-              { label: 'Device / Browser',  ok: null,
-                val: `${diag.isIOS ? '🍎 iOS' : '🤖 Android/Other'} · ${diag.isSafari ? 'Safari' : 'Other browser'}${diag.isIOS && !diag.isSafari ? ' ⚠️ iOS needs Safari' : ''}` },
-            ].map(row => (
-              <div key={row.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem' }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, marginTop: 3,
-                  background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#f59e0b' }} />
-                <div>
-                  <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{row.label}</div>
-                  <div style={{ color: row.ok === false ? '#fca5a5' : '#e2e8f0', fontWeight: 600 }}>{row.val}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: '#475569', fontSize: '0.85rem' }}>⏳ Checking device capabilities…</div>
-        )}
-      </div>
 
       <div style={s.card}>
         <div style={s.shopHours}>

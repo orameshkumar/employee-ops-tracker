@@ -9,9 +9,6 @@ const s = {
   btn:      { padding: '9px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 },
   label:    { fontSize: '0.8rem', color: '#94a3b8', marginBottom: 6 },
   meta:     { fontSize: '0.7rem', color: '#475569', marginTop: 4 },
-  diag:     { marginTop: 10, background: '#0f172a', borderRadius: 8, padding: '10px 12px', border: '1px solid #334155', fontSize: '0.72rem', color: '#64748b' },
-  diagRow:  { display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 },
-  dot:      (ok) => ({ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: ok === true ? '#22c55e' : ok === false ? '#ef4444' : '#f59e0b' }),
   err:      { marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#450a0a', border: '1px solid #ef4444', color: '#fca5a5', fontSize: '0.82rem', lineHeight: 1.5 },
   warn:     { marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#2d1b00', border: '1px solid #d97706', color: '#fcd34d', fontSize: '0.82rem', lineHeight: 1.5 },
   info:     { marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#0f2d3d', border: '1px solid #0284c7', color: '#7dd3fc', fontSize: '0.82rem', lineHeight: 1.5 },
@@ -45,14 +42,9 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
   const [photo,     setPhoto]     = useState(null)
   const [photoMeta, setPhotoMeta] = useState(null)
   const [error,     setError]     = useState(null)      // { text, fix }
-  const [diag,      setDiag]      = useState(null)      // diagnostics object
   const [settings,  setSettings]  = useState(DEFAULT_SETTINGS)
 
-  useEffect(() => {
-    loadSettings().then(setSettings)
-    // Gather diagnostics on mount
-    collectDiag().then(setDiag)
-  }, [])
+  useEffect(() => { loadSettings().then(setSettings) }, [])
 
   // Stop camera stream on unmount
   useEffect(() => () => stopStream(), [])
@@ -60,17 +52,6 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
   function stopStream() {
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
-  }
-
-  async function collectDiag() {
-    const isHttps = location.protocol === 'https:' || location.hostname === 'localhost'
-    const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
-    let permState = 'unknown'
-    try {
-      const perm = await navigator.permissions.query({ name: 'camera' })
-      permState = perm.state  // 'granted' | 'denied' | 'prompt'
-    } catch (_) { /* Firefox / some browsers don't support this */ }
-    return { isHttps, hasMediaDevices, permState, ua: navigator.userAgent.slice(0, 80) }
   }
 
   async function openCamera() {
@@ -103,7 +84,6 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
       } catch (err2) {
         setError(camErrMsg(err2))
         setStep('error')
-        collectDiag().then(setDiag)
         return
       }
     }
@@ -177,8 +157,6 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
     openCamera()
   }
 
-  const permColor = diag?.permState === 'granted' ? true : diag?.permState === 'denied' ? false : null
-
   return (
     <div style={s.wrap}>
       <div style={s.label}>{label}</div>
@@ -230,31 +208,6 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
             </button>
           </div>
         </>
-      )}
-
-      {/* Diagnostics — shown above the open button so it's immediately visible */}
-      {diag && (step === 'idle' || step === 'error') && (
-        <div style={{ marginTop: 10, background: '#0f172a', borderRadius: 8, padding: '10px 12px', border: '1px solid #1e293b' }}>
-          <div style={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', marginBottom: 8 }}>📋 CAMERA STATUS</div>
-          {[
-            { label: 'HTTPS',      ok: diag.isHttps,         val: diag.isHttps ? '✅ Yes' : '❌ No — needs HTTPS' },
-            { label: 'Camera API', ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? '✅ Supported' : '❌ Not supported' },
-            { label: 'Permission', ok: diag.permState === 'granted' ? true : diag.permState === 'denied' ? false : null,
-              val: diag.permState === 'granted' ? '✅ Granted' : diag.permState === 'denied' ? '❌ Denied' : '⚠️ ' + diag.permState },
-          ].map(row => (
-            <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, fontSize: '0.82rem' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#f59e0b' }} />
-              <span style={{ color: '#475569', width: 80, flexShrink: 0 }}>{row.label}</span>
-              <span style={{ color: row.ok === false ? '#fca5a5' : '#94a3b8', fontWeight: 600 }}>{row.val}</span>
-            </div>
-          ))}
-          {error && (
-            <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#f87171' }}>
-              ⛔ Error code: <strong>{error.fix}</strong>
-            </div>
-          )}
-        </div>
       )}
 
       {/* Open camera button (idle or after error) */}
