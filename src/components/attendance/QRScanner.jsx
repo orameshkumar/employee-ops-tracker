@@ -367,9 +367,16 @@ export default function QRScanner() {
         </div>
       </div>
 
+      {/* Progress / error message — shown right above the button so it's always visible */}
+      {message && (
+        <div style={s.msg(message.ok)}>
+          {message.text.split('\n').map((line, i) => <div key={i}>{line || <br />}</div>)}
+        </div>
+      )}
+
       {/* Scan button */}
       {!scanning && (
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
           {!isCheckedIn && (
             <button
               style={s.btn('green')}
@@ -401,12 +408,6 @@ export default function QRScanner() {
           </div>
           <div id="qr-reader" style={s.scanBox} />
           <button style={{ ...s.btn('gray'), marginTop: 10 }} onClick={stopScan}>✕ Cancel</button>
-        </div>
-      )}
-
-      {message && (
-        <div style={s.msg(message.ok)}>
-          {message.text.split('\n').map((line, i) => <div key={i}>{line || <br />}</div>)}
         </div>
       )}
 
