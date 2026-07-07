@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, updateDoc, deleteField } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { getAllEmployees } from '../../firebase/firestore'
 import { useAppSettings } from '../../hooks/useAppSettings'
@@ -11,9 +11,14 @@ async function fetchTasksForRange(fromDate, toDate) {
     getDocs(query(collection(db, 'dailyTasks'),  where('date', '>=', fromDate), where('date', '<=', toDate))),
     getDocs(query(collection(db, 'closureTasks'), where('date', '>=', fromDate), where('date', '<=', toDate))),
   ])
-  const daily   = dailySnap.docs.map(d   => ({ id: d.id,   type: 'daily',   ...d.data() }))
-  const closure = closureSnap.docs.map(d => ({ id: d.id,   type: 'closure', ...d.data() }))
+  const daily   = dailySnap.docs.map(d   => ({ id: d.id, type: 'daily',   ...d.data() }))
+  const closure = closureSnap.docs.map(d => ({ id: d.id, type: 'closure', ...d.data() }))
   return [...daily, ...closure].sort((a, b) => b.date.localeCompare(a.date))
+}
+
+function estKB(photoUrl) {
+  if (!photoUrl) return 0
+  return Math.round(photoUrl.length * 0.75 / 1024)
 }
 
 const s = {
@@ -42,7 +47,11 @@ const s = {
   empName:     { color: '#e2e8f0', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 },
 
   thumbGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 },
-  thumbCard:   (type) => ({ background: 'var(--app-surface-deep,#0f172a)', borderRadius: 8, overflow: 'hidden', border: `1px solid ${type === 'daily' ? '#1d4ed8' : '#d97706'}` }),
+  thumbCard:   (type, selected) => ({
+    background: 'var(--app-surface-deep,#0f172a)', borderRadius: 8, overflow: 'hidden',
+    border: selected ? '2px solid #ef4444' : `1px solid ${type === 'daily' ? '#1d4ed8' : '#d97706'}`,
+    cursor: 'pointer', position: 'relative',
+  }),
   thumbImg:    { width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' },
   thumbNoImg:  { width: '100%', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: '#0f172a' },
   thumbMeta:   { padding: '6px 8px' },
@@ -55,34 +64,46 @@ const s = {
   statItem:    { fontSize: '0.82rem' },
   statVal:     { color: '#c4b5fd', fontWeight: 800, fontSize: '1.1rem' },
   statLbl:     { color: '#64748b' },
+
+  // Storage management bar
+  storageBar:  { background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
+  selCount:    { color: '#fca5a5', fontWeight: 700, fontSize: '0.88rem', flex: 1 },
+  delBtn:      (disabled) => ({ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', background: disabled ? '#374151' : '#b91c1c', color: disabled ? '#6b7280' : '#fff' }),
+  selAllBtn:   { padding: '6px 14px', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', fontSize: '0.82rem', cursor: 'pointer' },
+  checkMark:   (on) => ({
+    position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%',
+    background: on ? '#ef4444' : 'rgba(0,0,0,0.5)', border: `2px solid ${on ? '#ef4444' : '#94a3b8'}`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#fff', fontWeight: 800,
+  }),
 }
 
 export default function TaskVerificationReport() {
   const { settings } = useAppSettings()
-  const [fromDate,       setFromDate]       = useState(daysAgoISO(7))
-  const [toDate,         setToDate]         = useState(todayISO())
-  const [selEmployee,    setSelEmployee]    = useState('all')
-  const [selTypes,       setSelTypes]       = useState(['daily', 'closure'])
-  const [selTasks,       setSelTasks]       = useState([])   // empty = all
-  const [employees,      setEmployees]      = useState([])
-  const [allTasks,       setAllTasks]       = useState([])   // raw fetched
-  const [loading,        setLoading]        = useState(false)
-  const [ranOnce,        setRanOnce]        = useState(false)
+  const [fromDate,    setFromDate]    = useState(daysAgoISO(7))
+  const [toDate,      setToDate]      = useState(todayISO())
+  const [selEmployee, setSelEmployee] = useState('all')
+  const [selTypes,    setSelTypes]    = useState(['daily', 'closure'])
+  const [selTasks,    setSelTasks]    = useState([])
+  const [employees,   setEmployees]   = useState([])
+  const [allTasks,    setAllTasks]    = useState([])
+  const [loading,     setLoading]     = useState(false)
+  const [ranOnce,     setRanOnce]     = useState(false)
 
-  // Unique task names available in fetched data
+  // Storage management state
+  const [manageMode,  setManageMode]  = useState(false)
+  const [selected,    setSelected]    = useState(new Set()) // Set of task IDs
+  const [deleting,    setDeleting]    = useState(false)
+
   const taskNamesInData = [...new Set(allTasks.map(t => t.taskName))].sort()
-
-  // All task names from settings (for filter chips even before running)
   const settingsDailyNames   = settings.dailyTasks   || []
   const settingsClosureNames = settings.closureTasks || []
   const allKnownNames = [...new Set([...settingsDailyNames, ...settingsClosureNames, ...taskNamesInData])].sort()
 
-  useEffect(() => {
-    getAllEmployees().then(setEmployees).catch(() => {})
-  }, [])
+  useEffect(() => { getAllEmployees().then(setEmployees).catch(() => {}) }, [])
 
   async function runReport() {
     setLoading(true)
+    setSelected(new Set())
     try {
       const tasks = await fetchTasksForRange(fromDate, toDate)
       setAllTasks(tasks)
@@ -101,13 +122,63 @@ export default function TaskVerificationReport() {
     setSelTasks(prev => prev.includes(name) ? prev.filter(x => x !== name) : [...prev, name])
   }
 
-  // Apply filters
   const filtered = allTasks.filter(t => {
     if (selEmployee !== 'all' && t.uid !== selEmployee) return false
     if (!selTypes.includes(t.type)) return false
     if (selTasks.length > 0 && !selTasks.includes(t.taskName)) return false
     return true
   })
+
+  // Only tasks in filtered view that have a photo
+  const filteredWithPhoto = filtered.filter(t => t.photoUrl)
+
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    setSelected(new Set(filteredWithPhoto.map(t => t.id)))
+  }
+  function deselectAll() {
+    setSelected(new Set())
+  }
+
+  async function deleteSelectedPhotos() {
+    if (selected.size === 0) return
+    const totalKB = [...selected].reduce((sum, id) => {
+      const t = allTasks.find(t => t.id === id)
+      return sum + estKB(t?.photoUrl)
+    }, 0)
+    const confirm = window.confirm(
+      `Delete photos for ${selected.size} task record${selected.size !== 1 ? 's' : ''}?\n\nThis will free ~${totalKB < 1024 ? totalKB + ' KB' : (totalKB / 1024).toFixed(1) + ' MB'} from Firestore.\n\nThe task completion records are kept — only the photos are removed. This cannot be undone.`
+    )
+    if (!confirm) return
+
+    setDeleting(true)
+    try {
+      await Promise.all([...selected].map(id => {
+        const task = allTasks.find(t => t.id === id)
+        if (!task) return Promise.resolve()
+        const colName = task.type === 'daily' ? 'dailyTasks' : 'closureTasks'
+        return updateDoc(doc(db, colName, id), { photoUrl: deleteField() })
+      }))
+      // Remove photoUrl from local state so UI updates immediately
+      setAllTasks(prev => prev.map(t =>
+        selected.has(t.id) ? { ...t, photoUrl: null } : t
+      ))
+      setSelected(new Set())
+      setManageMode(false)
+      alert(`✅ Deleted photos from ${selected.size} records.`)
+    } catch (err) {
+      alert('Error deleting photos: ' + err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // Group: date → uid → tasks[]
   const byDate = {}
@@ -122,13 +193,19 @@ export default function TaskVerificationReport() {
   const totalTasks = filtered.length
   const totalEmps  = new Set(filtered.map(t => t.uid)).size
 
-  function handlePrint() {
-    window.print()
+  // Total estimated photo storage in filtered view
+  const totalPhotoKB = filtered.reduce((sum, t) => sum + estKB(t.photoUrl), 0)
+  const selectedKB   = [...selected].reduce((sum, id) => {
+    const t = allTasks.find(t => t.id === id)
+    return sum + estKB(t?.photoUrl)
+  }, 0)
+
+  function fmtSize(kb) {
+    return kb < 1024 ? `${kb} KB` : `${(kb / 1024).toFixed(1)} MB`
   }
 
   return (
     <div style={s.wrap}>
-      {/* Print-only styles injected inline */}
       <style>{`
         @media print {
           body { background: #fff !important; color: #000 !important; }
@@ -176,7 +253,6 @@ export default function TaskVerificationReport() {
             </div>
           </div>
 
-          {/* Task name filter — shown after first run or from settings */}
           {allKnownNames.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ ...s.label, marginBottom: 6 }}>
@@ -212,11 +288,49 @@ export default function TaskVerificationReport() {
               <div style={s.statItem}><div style={s.statVal}>{totalTasks}</div><div style={s.statLbl}>Tasks verified</div></div>
               <div style={s.statItem}><div style={s.statVal}>{totalEmps}</div><div style={s.statLbl}>Employees</div></div>
               <div style={s.statItem}><div style={s.statVal}>{totalDays}</div><div style={s.statLbl}>Days covered</div></div>
+              {totalPhotoKB > 0 && (
+                <div style={s.statItem}>
+                  <div style={{ ...s.statVal, color: '#f97316' }}>{fmtSize(totalPhotoKB)}</div>
+                  <div style={s.statLbl}>Photo storage</div>
+                </div>
+              )}
               <div style={{ flex: 1 }} />
-              <button style={{ ...s.printBtn, alignSelf: 'center' }} className="no-print" onClick={handlePrint}>
-                🖨️ Print / Save PDF
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignSelf: 'center', flexWrap: 'wrap' }}>
+                {filteredWithPhoto.length > 0 && (
+                  <button
+                    style={{ ...s.printBtn, background: manageMode ? '#7f1d1d' : '#475569' }}
+                    className="no-print"
+                    onClick={() => { setManageMode(m => !m); setSelected(new Set()) }}
+                  >
+                    {manageMode ? '✕ Cancel' : '🗑️ Manage Storage'}
+                  </button>
+                )}
+                <button style={s.printBtn} className="no-print" onClick={() => window.print()}>
+                  🖨️ Print / Save PDF
+                </button>
+              </div>
             </div>
+
+            {/* Storage management toolbar */}
+            {manageMode && (
+              <div style={s.storageBar} className="no-print">
+                <div style={s.selCount}>
+                  {selected.size === 0
+                    ? `Tap photos to select for deletion · ${filteredWithPhoto.length} photo${filteredWithPhoto.length !== 1 ? 's' : ''} (${fmtSize(totalPhotoKB)})`
+                    : `${selected.size} selected · ${fmtSize(selectedKB)} will be freed`}
+                </div>
+                <button style={s.selAllBtn} onClick={selected.size === filteredWithPhoto.length ? deselectAll : selectAll}>
+                  {selected.size === filteredWithPhoto.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <button
+                  style={s.delBtn(selected.size === 0 || deleting)}
+                  disabled={selected.size === 0 || deleting}
+                  onClick={deleteSelectedPhotos}
+                >
+                  {deleting ? '⏳ Deleting…' : `🗑️ Delete ${selected.size > 0 ? selected.size + ' Photo' + (selected.size !== 1 ? 's' : '') : 'Photos'}`}
+                </button>
+              </div>
+            )}
 
             {sortedDates.length === 0 && (
               <div style={s.emptyMsg}>No tasks found for the selected filters.</div>
@@ -241,25 +355,40 @@ export default function TaskVerificationReport() {
                         </span>
                       </div>
                       <div style={s.thumbGrid}>
-                        {tasks.map(task => (
-                          <div key={task.id} style={s.thumbCard(task.type)} className="thumb-card">
-                            {task.photoUrl
-                              ? <img src={task.photoUrl} alt={task.taskName} style={s.thumbImg} className="thumb-img" />
-                              : <div style={s.thumbNoImg}>📷</div>
-                            }
-                            <div style={s.thumbMeta}>
-                              <div style={s.thumbName}>{task.taskName}</div>
-                              <span style={s.thumbBadge(task.type)}>
-                                {task.type === 'daily' ? 'DAILY' : 'CLOSURE'}
-                              </span>
-                              {task.createdAt?.seconds && (
-                                <div style={s.thumbTime}>
-                                  {new Date(task.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
+                        {tasks.map(task => {
+                          const isSel = selected.has(task.id)
+                          const selectable = manageMode && !!task.photoUrl
+                          return (
+                            <div
+                              key={task.id}
+                              style={s.thumbCard(task.type, isSel)}
+                              className="thumb-card"
+                              onClick={selectable ? () => toggleSelect(task.id) : undefined}
+                            >
+                              {manageMode && task.photoUrl && (
+                                <div style={s.checkMark(isSel)}>{isSel ? '✓' : ''}</div>
                               )}
+                              {task.photoUrl
+                                ? <img src={task.photoUrl} alt={task.taskName} style={s.thumbImg} className="thumb-img" />
+                                : <div style={s.thumbNoImg}>📷</div>
+                              }
+                              <div style={s.thumbMeta}>
+                                <div style={s.thumbName}>{task.taskName}</div>
+                                <span style={s.thumbBadge(task.type)}>
+                                  {task.type === 'daily' ? 'DAILY' : 'CLOSURE'}
+                                </span>
+                                {task.photoUrl && (
+                                  <div style={{ ...s.thumbTime, color: '#64748b' }}>{fmtSize(estKB(task.photoUrl))}</div>
+                                )}
+                                {task.createdAt?.seconds && (
+                                  <div style={s.thumbTime}>
+                                    {new Date(task.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   ))}

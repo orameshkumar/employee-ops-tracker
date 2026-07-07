@@ -150,18 +150,22 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
     canvas.height = h
     canvas.getContext('2d').drawImage(video, 0, 0, w, h)
 
+    // WebP is 25-35% smaller than JPEG at same quality; fall back to JPEG if unsupported
+    const supportsWebP = canvas.toDataURL('image/webp').startsWith('data:image/webp')
+    const fmt = supportsWebP ? 'image/webp' : 'image/jpeg'
+
     let quality = settings.imageQuality || 0.8
-    let dataUrl = canvas.toDataURL('image/jpeg', quality)
+    let dataUrl = canvas.toDataURL(fmt, quality)
     const maxBytes = (settings.imageMaxSizeKB || 500) * 1024
     while (dataUrl.length * 0.75 > maxBytes && quality > 0.2) {
       quality = Math.max(0.2, quality - 0.1)
-      dataUrl = canvas.toDataURL('image/jpeg', quality)
+      dataUrl = canvas.toDataURL(fmt, quality)
     }
 
     stopStream()
     const sizeKB = Math.round(dataUrl.length * 0.75 / 1024)
     setPhoto(dataUrl)
-    setPhotoMeta({ width: w, height: h, sizeKB, quality: Math.round(quality * 100) })
+    setPhotoMeta({ width: w, height: h, sizeKB, quality: Math.round(quality * 100), fmt: supportsWebP ? 'WebP' : 'JPEG' })
     setStep('captured')
     onPhoto(dataUrl)
   }
@@ -217,7 +221,7 @@ export default function PhotoCapture({ onPhoto, label = 'Capture Photo Proof' })
           <img src={photo} alt="proof" style={s.preview} />
           {photoMeta && (
             <div style={s.meta}>
-              {photoMeta.width}×{photoMeta.height}px · {photoMeta.sizeKB}KB · quality {photoMeta.quality}%
+              {photoMeta.width}×{photoMeta.height}px · {photoMeta.sizeKB}KB · {photoMeta.fmt} · quality {photoMeta.quality}%
             </div>
           )}
           <div style={s.btnRow}>
