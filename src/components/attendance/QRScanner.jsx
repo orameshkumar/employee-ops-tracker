@@ -4,6 +4,20 @@ import { checkIn, checkOut, getTodayAttendance } from '../../firebase/firestore'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppSettings } from '../../hooks/useAppSettings'
 
+async function collectDiag() {
+  const isHttps = location.protocol === 'https:' || location.hostname === 'localhost'
+  const hasMediaDevices = !!(navigator.mediaDevices?.getUserMedia)
+  let permState = 'unknown'
+  try {
+    const p = await navigator.permissions.query({ name: 'camera' })
+    permState = p.state
+  } catch (_) {}
+  const ua = navigator.userAgent
+  const isIOS = /iphone|ipad|ipod/i.test(ua)
+  const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua)
+  return { isHttps, hasMediaDevices, permState, isIOS, isSafari, ua: ua.slice(0, 100) }
+}
+
 const s = {
   wrap: { padding: 24, maxWidth: 520, margin: '0 auto' },
   title: { color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
@@ -45,6 +59,7 @@ export default function QRScanner() {
   const [message, setMessage] = useState(null)
   const scannerRef = useRef(null)
   const [permState, setPermState] = useState('idle') // 'idle' | 'requesting' | 'granted' | 'denied'
+  const [diag, setDiag] = useState(null)
 
   // Keep a ref to latest state so the scanner callback doesn't use stale closures
   const stateRef = useRef({})
@@ -56,6 +71,7 @@ export default function QRScanner() {
   }
 
   useEffect(() => { reload() }, [user.uid])
+  useEffect(() => { collectDiag().then(setDiag) }, [])
 
   // Explicitly request camera permission before starting the scanner.
   // This triggers the browser's native permission prompt on iOS / Android,
@@ -72,14 +88,21 @@ export default function QRScanner() {
     } catch (err) {
       setPermState('denied')
       const name = err?.name || ''
+      const d = await collectDiag()
+      setDiag(d)
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        setMessage({ ok: false, text: '🚫 Camera permission denied. Open your browser settings and allow camera access for this site, then try again.' })
+        const iosHint = d.isIOS ? '\n\niOS: Settings → Safari → Camera → Allow' : '\n\nTap the 🔒 icon in the address bar → allow Camera → refresh.'
+        setMessage({ ok: false, text: `🚫 Camera permission denied. [${name}]${iosHint}` })
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        setMessage({ ok: false, text: '📷 No camera found on this device.' })
+        setMessage({ ok: false, text: `📷 No camera found. [${name}]\n\nMake sure your device has a camera and it is not disabled.` })
       } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-        setMessage({ ok: false, text: '📷 Camera is in use by another app. Close it and try again.' })
+        setMessage({ ok: false, text: `📷 Camera is in use by another app. [${name}]\n\nClose other apps using the camera and try again.` })
+      } else if (name === 'SecurityError') {
+        setMessage({ ok: false, text: `🔒 Camera blocked — app must be on HTTPS. [${name}]` })
+      } else if (name === 'OverconstrainedError') {
+        setMessage({ ok: false, text: `📷 Back camera not available. [${name}]\n\nTrying without camera preference — tap the button again.` })
       } else {
-        setMessage({ ok: false, text: `Camera error: ${err?.message || err?.name || 'Unknown'}` })
+        setMessage({ ok: false, text: `Camera error: [${name}] ${err?.message || 'Unknown'}\n\nUA: ${navigator.userAgent.slice(0, 80)}` })
       }
     }
   }
@@ -297,7 +320,31 @@ export default function QRScanner() {
         </div>
       )}
 
-      {message && <div style={s.msg(message.ok)}>{message.text}</div>}
+      {message && (
+        <div style={s.msg(message.ok)}>
+          {message.text.split('\n').map((line, i) => <div key={i}>{line || <br />}</div>)}
+        </div>
+      )}
+
+      {/* Diagnostics panel — always visible to help debug camera issues */}
+      {diag && (
+        <div style={{ marginTop: 16, background: '#0f172a', borderRadius: 8, padding: '10px 14px', border: '1px solid #1e293b', fontSize: '0.72rem', color: '#475569' }}>
+          <div style={{ color: '#334155', fontWeight: 700, marginBottom: 6 }}>📋 Camera Diagnostics</div>
+          {[
+            { label: 'HTTPS',           ok: diag.isHttps,         val: diag.isHttps ? 'Yes ✓' : '✗ Camera requires HTTPS' },
+            { label: 'MediaDevices API',ok: diag.hasMediaDevices, val: diag.hasMediaDevices ? 'Supported ✓' : '✗ Not supported — try a different browser' },
+            { label: 'Permission',      ok: diag.permState === 'granted', val: diag.permState },
+            { label: 'iOS Device',      ok: null,                 val: diag.isIOS ? 'Yes — use Safari' : 'No' },
+            { label: 'Browser',         ok: null,                 val: diag.isSafari ? 'Safari' : diag.ua.split(' ').slice(-1)[0] },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: row.ok === true ? '#22c55e' : row.ok === false ? '#ef4444' : '#334155' }} />
+              <span style={{ color: '#475569', width: 120, flexShrink: 0 }}>{row.label}:</span>
+              <span style={{ color: row.ok === false ? '#fca5a5' : '#64748b' }}>{row.val}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
