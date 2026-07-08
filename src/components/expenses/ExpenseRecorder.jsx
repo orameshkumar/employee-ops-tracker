@@ -30,6 +30,7 @@ const s = {
   card: { background: '#1e293b', borderRadius: 10, padding: 14, border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   expName: { color: '#e2e8f0', fontWeight: 600, fontSize: '0.9rem' },
   expMeta: { color: '#64748b', fontSize: '0.75rem', marginTop: 2 },
+  expEmployee: { color: '#f9a8d4', fontSize: '0.78rem', fontWeight: 700, marginBottom: 2 },
   amount: { color: '#4ade80', fontWeight: 800, fontSize: '1rem', flexShrink: 0 },
   badge: (st) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: STATUS_BG[st] || STATUS_BG.pending, color: STATUS_COLOR[st] || STATUS_COLOR.pending }),
   thumb: { width: 50, height: 50, objectFit: 'cover', borderRadius: 6 },
@@ -138,8 +139,9 @@ export default function ExpenseRecorder() {
           {expenses.map(exp => (
             <div key={exp.id} style={s.card}>
               <div style={{ flex: 1 }}>
+                {isManager && <div style={s.expEmployee}>👤 {exp.userName}</div>}
                 <div style={s.expName}>{exp.description}</div>
-                <div style={s.expMeta}>{exp.category} · {fmtDate(exp.date)}{(isManager && tab === 'approve') ? ` · ${exp.userName}` : ''}</div>
+                <div style={s.expMeta}>{exp.category} · {fmtDate(exp.date)}</div>
                 {exp.notes && <div style={{ ...s.expMeta, marginTop: 2 }}>{exp.notes}</div>}
                 <div style={{ marginTop: 6 }}>
                   <span style={s.badge(exp.status)}>{exp.status?.toUpperCase()}</span>
