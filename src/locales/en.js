@@ -63,6 +63,7 @@ export default {
   qr_cancel: '✕ Cancel',
   qr_pointing: '📸 Point camera at the shop QR code…',
   qr_warning_closure: '⚠️ It\'s past closing time. Complete Closure Tasks before scanning out.',
+  qr_warn_closure: '⚠️ Closure tasks are not fully completed. You can still check out — please complete them when possible.',
   qr_err_closure: '⚠️ Complete Closure Tasks before checking out.\n\nGo to Closure Tasks, finish the checklist, then come back to scan out.',
 
   // Sales entry
