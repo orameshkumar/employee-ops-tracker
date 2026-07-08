@@ -10,7 +10,7 @@ import DateInput from '../shared/DateInput'
 import { fmtDate, todayISO, daysAgoISO } from '../../utils/dateUtils'
 
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
-const ONLINE_METHODS = ['UPI / QR Pay', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet']
+const ONLINE_METHODS = ['UPI / QR Pay', 'Wallet']
 const STATUS_COLOR = { pending: '#fbbf24', approved: '#4ade80', rejected: '#f87171' }
 const STATUS_BG = { pending: '#3b2a00', approved: '#14532d', rejected: '#450a0a' }
 

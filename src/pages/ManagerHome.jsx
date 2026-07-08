@@ -8,7 +8,7 @@ import AppConfig from '../components/config/AppConfig'
 import EmployeeManagement from '../components/employees/EmployeeManagement'
 import HistoryPage from '../components/history/HistoryPage'
 import BackupRestore from '../components/backup/BackupRestore'
-import { getAllAttendance, getAllSales } from '../firebase/firestore'
+import { getAllAttendance, getAllSales, updateSalesRecord } from '../firebase/firestore'
 import { loadSettings } from '../hooks/useAppSettings'
 import { fmtDate } from '../utils/dateUtils'
 
@@ -51,6 +51,7 @@ function Dashboard() {
   const [sales, setSales] = useState([])
   const [error, setError] = useState(null)
   const [backupWarning, setBackupWarning] = useState(null)
+  const [editingSale, setEditingSale] = useState(null)
   const todayStr = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
@@ -153,10 +154,10 @@ function Dashboard() {
         <div style={s.sectionHead}>💰 Today's Sales</div>
         <table style={s.table}>
           <thead><tr>
-            <th style={s.th}>Employee</th><th style={s.th}>Online</th><th style={s.th}>Cash</th><th style={s.th}>Total</th><th style={s.th}>Notes</th>
+            <th style={s.th}>Employee</th><th style={s.th}>Online</th><th style={s.th}>Cash</th><th style={s.th}>Total</th><th style={s.th}>Notes</th><th style={s.th}></th>
           </tr></thead>
           <tbody>
-            {sales.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={5}>No sales recorded yet</td></tr>}
+            {sales.length === 0 && <tr><td style={{ ...s.td, color: '#475569' }} colSpan={6}>No sales recorded yet</td></tr>}
             {sales.map(r => (
               <tr key={r.id}>
                 <td style={s.td}>{r.userName}</td>
@@ -164,10 +165,100 @@ function Dashboard() {
                 <td style={s.td}>₹{(r.cashSales || 0).toFixed(2)}</td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#4ade80' }}>₹{(r.grandTotal || 0).toFixed(2)}</td>
                 <td style={{ ...s.td, color: '#64748b' }}>{r.notes || '—'}</td>
+                <td style={s.td}>
+                  <button
+                    style={{ padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem', background: '#1e3a5f', color: '#60a5fa' }}
+                    onClick={() => setEditingSale(r)}
+                  >✏ Edit</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      {editingSale && (
+        <SalesDashEditModal
+          record={editingSale}
+          onClose={() => setEditingSale(null)}
+          onSaved={() => {
+            setEditingSale(null)
+            getAllSales(todayStr).then(setSales)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+const ONLINE_METHODS = ['UPI / QR Pay', 'Wallet']
+
+function SalesDashEditModal({ record, onClose, onSaved }) {
+  const [online, setOnline] = useState(
+    Object.fromEntries(ONLINE_METHODS.map(m => [m, record.onlineSales?.[m] || '']))
+  )
+  const [cash, setCash] = useState(String(record.cashSales || ''))
+  const [notes, setNotes] = useState(record.notes || '')
+  const [saving, setSaving] = useState(false)
+
+  const onlineTotal = ONLINE_METHODS.reduce((sum, m) => sum + (parseFloat(online[m]) || 0), 0)
+  const grandTotal = onlineTotal + (parseFloat(cash) || 0)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await updateSalesRecord(record.id, {
+        onlineSales: online, onlineTotal,
+        cashSales: parseFloat(cash) || 0, grandTotal, notes,
+      })
+      onSaved()
+    } catch (e) { alert('Error: ' + e.message) }
+    finally { setSaving(false) }
+  }
+
+  const ov = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
+  const mo = { background: '#1e293b', borderRadius: 14, padding: 24, width: '100%', maxWidth: 420, border: '1px solid #334155' }
+  const fi = { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }
+  const lb = { display: 'block', color: '#94a3b8', fontSize: '0.78rem', marginBottom: 4 }
+
+  return (
+    <div style={ov} onClick={onClose}>
+      <div style={mo} onClick={e => e.stopPropagation()}>
+        <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>✏ Edit Sales — {record.userName}</div>
+        <div style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: 18 }}>{record.date}</div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={lb}>Online Sales</label>
+          {ONLINE_METHODS.map(m => (
+            <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{ color: '#64748b', fontSize: '0.8rem', width: 120, flexShrink: 0 }}>{m}</span>
+              <input style={{ ...fi, textAlign: 'right' }} type="number" min="0" step="0.01"
+                value={online[m]} onChange={e => setOnline(p => ({ ...p, [m]: e.target.value }))} />
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div>
+            <label style={lb}>Cash Sales (₹)</label>
+            <input style={fi} type="number" min="0" step="0.01" value={cash} onChange={e => setCash(e.target.value)} />
+          </div>
+          <div>
+            <label style={lb}>Grand Total</label>
+            <div style={{ color: '#4ade80', fontWeight: 800, fontSize: '1.1rem', padding: '8px 0' }}>₹{grandTotal.toFixed(2)}</div>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={lb}>Notes</label>
+          <input style={fi} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional…" />
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #334155', cursor: 'pointer', fontWeight: 700, background: '#0f172a', color: '#64748b' }} onClick={onClose}>Cancel</button>
+          <button style={{ flex: 1, padding: 10, borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, background: '#3b82f6', color: '#fff' }} onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : '💾 Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   )
