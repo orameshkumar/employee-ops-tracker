@@ -9,7 +9,7 @@ import { loadSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings'
 const CATEGORIES = ['Travel', 'Food & Beverages', 'Office Supplies', 'Utilities', 'Maintenance', 'Marketing', 'Other']
 
 const s = {
-  wrap: { padding: 24, maxWidth: 900, margin: '0 auto' },
+  wrap: { padding: '20px 12px', maxWidth: 900, margin: '0 auto' },
   title: { color: '#f97316', fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 },
   sub: { color: '#64748b', fontSize: '0.85rem', marginBottom: 20 },
   filterBar: { background: '#1e293b', borderRadius: 12, padding: 16, border: '1px solid #334155', marginBottom: 20, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' },
@@ -21,7 +21,8 @@ const s = {
   stat: (c) => ({ background: '#1e293b', borderRadius: 12, padding: 16, border: `1px solid ${c}` }),
   statVal: { fontSize: '1.5rem', fontWeight: 800, color: '#e2e8f0', marginBottom: 2 },
   statLabel: { color: '#64748b', fontSize: '0.75rem' },
-  section: { background: '#1e293b', borderRadius: 12, border: '1px solid #334155', marginBottom: 16, overflow: 'hidden' },
+  section: { background: '#1e293b', borderRadius: 12, border: '1px solid #334155', marginBottom: 16 },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   sectionHead: { padding: '12px 18px', background: '#0f172a', color: '#94a3b8', fontWeight: 700, fontSize: '0.85rem', borderBottom: '1px solid #334155' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', borderBottom: '1px solid #1e293b', background: '#162032' },
@@ -162,7 +163,7 @@ export default function Reports() {
           {/* Sales: Online vs Cash */}
           <div style={s.section}>
             <div style={s.sectionHead}>💰 Sales Collection — Online vs Cash</div>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead><tr>
                 <th style={s.th}>Date</th><th style={s.th}>Online (₹)</th><th style={s.th}>Cash (₹)</th><th style={s.th}>Total (₹)</th><th style={s.th}>Online %</th>
               </tr></thead>
@@ -194,13 +195,13 @@ export default function Reports() {
                   </tr>
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {/* Expenses by category */}
           <div style={s.section}>
             <div style={s.sectionHead}>🧾 Expenses by Category</div>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead><tr>
                 <th style={s.th}>Category</th><th style={s.th}>Approved (₹)</th><th style={s.th}>Pending (₹)</th><th style={s.th}>Rejected (₹)</th><th style={s.th}>Claims</th><th style={s.th}>Split</th>
               </tr></thead>
@@ -235,13 +236,13 @@ export default function Reports() {
                   </tr>
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {/* Attendance per employee */}
           <div style={s.section}>
             <div style={s.sectionHead}>👥 Attendance &amp; Absence — Per Employee</div>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead><tr>
                 <th style={s.th}>Employee</th><th style={s.th}>Present</th><th style={s.th}>Absent</th><th style={s.th}>Attendance %</th><th style={s.th}>On Time</th><th style={s.th}>Total Hours</th><th style={s.th}>Avg Hours/Day</th>
               </tr></thead>
@@ -264,7 +265,7 @@ export default function Reports() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       )}
