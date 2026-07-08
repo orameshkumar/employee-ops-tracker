@@ -95,8 +95,8 @@ export default function TaskVerificationReport() {
   const [deleting,    setDeleting]    = useState(false)
 
   const taskNamesInData = [...new Set(allTasks.map(t => t.taskName))].sort()
-  const settingsDailyNames   = settings.dailyTasks   || []
-  const settingsClosureNames = settings.closureTasks || []
+  const settingsDailyNames   = (settings.dailyTasks   || []).map(t => typeof t === 'string' ? t : t.en)
+  const settingsClosureNames = (settings.closureTasks || []).map(t => typeof t === 'string' ? t : t.en)
   const allKnownNames = [...new Set([...settingsDailyNames, ...settingsClosureNames, ...taskNamesInData])].sort()
 
   useEffect(() => { getAllEmployees().then(setEmployees).catch(() => {}) }, [])
