@@ -47,10 +47,10 @@ const s = {
   empName:     { color: '#e2e8f0', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 },
 
   thumbGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 },
-  thumbCard:   (type, selected) => ({
+  thumbCard:   (type, selected, clickable) => ({
     background: 'var(--app-surface-deep,#0f172a)', borderRadius: 8, overflow: 'hidden',
     border: selected ? '2px solid #ef4444' : `1px solid ${type === 'daily' ? '#1d4ed8' : '#d97706'}`,
-    cursor: 'pointer', position: 'relative',
+    cursor: clickable ? 'zoom-in' : 'default', position: 'relative',
   }),
   thumbImg:    { width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' },
   thumbNoImg:  { width: '100%', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', background: '#0f172a' },
@@ -93,6 +93,9 @@ export default function TaskVerificationReport() {
   const [manageMode,  setManageMode]  = useState(false)
   const [selected,    setSelected]    = useState(new Set()) // Set of task IDs
   const [deleting,    setDeleting]    = useState(false)
+
+  // Lightbox state
+  const [lightbox, setLightbox] = useState(null) // { src, taskName, type, userName, date, time }
 
   const taskNamesInData = [...new Set(allTasks.map(t => t.taskName))].sort()
   const settingsDailyNames   = (settings.dailyTasks   || []).map(t => typeof t === 'string' ? t : t.en)
@@ -358,12 +361,13 @@ export default function TaskVerificationReport() {
                         {tasks.map(task => {
                           const isSel = selected.has(task.id)
                           const selectable = manageMode && !!task.photoUrl
+                          const viewable = !manageMode && !!task.photoUrl
                           return (
                             <div
                               key={task.id}
-                              style={s.thumbCard(task.type, isSel)}
+                              style={s.thumbCard(task.type, isSel, selectable || viewable)}
                               className="thumb-card"
-                              onClick={selectable ? () => toggleSelect(task.id) : undefined}
+                              onClick={selectable ? () => toggleSelect(task.id) : (task.photoUrl && !manageMode ? () => setLightbox({ src: task.photoUrl, taskName: task.taskName, type: task.type, userName, date, time: task.createdAt?.seconds ? new Date(task.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null }) : undefined)}
                             >
                               {manageMode && task.photoUrl && (
                                 <div style={s.checkMark(isSel)}>{isSel ? '✓' : ''}</div>
@@ -402,6 +406,62 @@ export default function TaskVerificationReport() {
           <div style={s.emptyMsg}>Set your filters and click <strong>Run Report</strong> to view task verification.</div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightbox(null)}
+            style={{
+              position: 'absolute', top: 14, right: 16,
+              background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%',
+              color: '#fff', fontSize: '1.3rem', width: 38, height: 38,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1,
+            }}
+          >✕</button>
+
+          {/* Image */}
+          <img
+            src={lightbox.src}
+            alt={lightbox.taskName}
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '100%', maxHeight: 'calc(100dvh - 120px)',
+              objectFit: 'contain', borderRadius: 10,
+              boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+              display: 'block',
+            }}
+          />
+
+          {/* Caption */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ marginTop: 14, textAlign: 'center', maxWidth: 480 }}
+          >
+            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>
+              {lightbox.taskName}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <span style={{ ...s.thumbBadge(lightbox.type), fontSize: '0.72rem' }}>
+                {lightbox.type === 'daily' ? 'DAILY' : 'CLOSURE'}
+              </span>
+              <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>👤 {lightbox.userName}</span>
+              <span style={{ color: '#64748b', fontSize: '0.78rem' }}>📅 {lightbox.date}{lightbox.time ? ` · ${lightbox.time}` : ''}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
