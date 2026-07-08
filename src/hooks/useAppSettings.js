@@ -14,27 +14,27 @@ export const DEFAULT_SETTINGS = {
   imageQuality: 0.75,
   imageMaxSizeKB: 200,
   dailyTasks: [
-    'Morning store opening check',
-    'Stock level verification',
-    'Equipment / POS system check',
-    'Cleanliness & hygiene inspection',
-    'Team briefing completed',
-    'Customer area setup',
-    'Safety checklist',
+    { en: 'Morning store opening check', ta: '' },
+    { en: 'Stock level verification', ta: '' },
+    { en: 'Equipment / POS system check', ta: '' },
+    { en: 'Cleanliness & hygiene inspection', ta: '' },
+    { en: 'Team briefing completed', ta: '' },
+    { en: 'Customer area setup', ta: '' },
+    { en: 'Safety checklist', ta: '' },
   ],
   closureTasks: [
-    'All cash counted & secured',
-    'POS system closed & reports printed',
-    'Stock doors locked',
-    'Lights & AC turned off',
-    'Cleaning completed',
-    'Alarm system armed',
-    'Exit doors locked & verified',
+    { en: 'All cash counted & secured', ta: '' },
+    { en: 'POS system closed & reports printed', ta: '' },
+    { en: 'Stock doors locked', ta: '' },
+    { en: 'Lights & AC turned off', ta: '' },
+    { en: 'Cleaning completed', ta: '' },
+    { en: 'Alarm system armed', ta: '' },
+    { en: 'Exit doors locked & verified', ta: '' },
   ],
 }
 
 // Normalize tasks: old string[] → { en, ta }[] for backward compatibility
-function normalizeTasks(arr) {
+export function normalizeTasks(arr) {
   return (arr || []).map(t => (typeof t === 'string' ? { en: t, ta: '' } : t))
 }
 

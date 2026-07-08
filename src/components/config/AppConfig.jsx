@@ -35,9 +35,11 @@ function TaskListEditor({ tasks, onChange }) {
   const [newEn, setNewEn] = useState('')
   const [newTa, setNewTa] = useState('')
 
-  // tasks is { en, ta }[]
+  // tasks is { en, ta }[]; normalize in case a legacy string snuck through
+  function norm(t) { return typeof t === 'string' ? { en: t, ta: '' } : t }
+
   function update(i, field, val) {
-    const updated = [...tasks]
+    const updated = tasks.map(norm)
     updated[i] = { ...updated[i], [field]: val }
     onChange(updated)
   }
