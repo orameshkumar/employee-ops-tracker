@@ -179,6 +179,11 @@ export default function QRScanner() {
               setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
             } else if (data.action === 'out') {
               const needsClosure = requireClosure()
+              const { sessions: s2 } = stateRef.current
+              const openS = s2.find(s => s.checkIn && !s.checkOut)
+              if (needsClosure && !openS?.closureComplete) {
+                setMessage({ ok: false, text: t('qr_err_closure') }); return
+              }
               await checkOut(user.uid, needsClosure)
               setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
             }
@@ -192,6 +197,11 @@ export default function QRScanner() {
             setMessage({ ok: true, text: `✅ Session ${sessionCount + 1} started — checked in!` })
           } else {
             const needsClosure = requireClosure()
+            const { sessions: s2 } = stateRef.current
+            const openS = s2.find(s => s.checkIn && !s.checkOut)
+            if (needsClosure && !openS?.closureComplete) {
+              setMessage({ ok: false, text: t('qr_err_closure') }); return
+            }
             await checkOut(user.uid, needsClosure)
             setMessage({ ok: true, text: needsClosure ? '✅ Final sign-out complete!' : '✅ Checked out (break/lunch).' })
           }
@@ -255,6 +265,20 @@ export default function QRScanner() {
 
   const isPastShopEnd = requireClosureForSignOut()
   const closureReady = openSession?.closureComplete === true
+
+  // Reload fresh sessions then gate checkout — avoids stale closureComplete state
+  async function handleCheckoutClick() {
+    if (permState === 'requesting') return
+    setMessage(null)
+    const fresh = await getTodayAttendance(user.uid).catch(() => sessions)
+    setSessions(fresh)
+    const freshOpen = fresh.find(s => s.checkIn && !s.checkOut)
+    if (isPastShopEnd && !freshOpen?.closureComplete) {
+      setMessage({ ok: false, text: t('qr_err_closure') })
+      return
+    }
+    requestCameraAndScan()
+  }
   const startTime = settings.shopStartTime || '09:00'
   const endTime = settings.shopEndTime || '21:00'
 
@@ -341,11 +365,8 @@ export default function QRScanner() {
           {isCheckedIn && (
             <button
               style={s.btn(isPastShopEnd && !closureReady ? 'gray' : 'red')}
-              onClick={isPastShopEnd && !closureReady
-                ? () => setMessage({ ok: false, text: t('qr_err_closure') })
-                : requestCameraAndScan}
+              onClick={isPastShopEnd ? handleCheckoutClick : requestCameraAndScan}
               disabled={permState === 'requesting'}
-              title={isPastShopEnd && !closureReady ? 'Complete closure tasks first' : ''}
             >
               {permState === 'requesting' ? t('qr_requesting') : (isPastShopEnd ? t('qr_scan_out_final') : t('qr_scan_out_break'))}
             </button>
