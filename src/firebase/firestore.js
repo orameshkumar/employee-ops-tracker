@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, setDoc, getDoc, getDocs,
-  query, where, updateDoc, deleteDoc, serverTimestamp,
+  query, where, updateDoc, deleteDoc, serverTimestamp, Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -58,6 +58,55 @@ export async function getAllAttendance(dateStr) {
   const q = query(collection(db, 'attendance'), where('date', '==', dateStr))
   const snap = await getDocs(q)
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+// Convert "2026-07-08" + "09:30" → Firestore Timestamp
+function toTimestamp(dateStr, timeStr) {
+  const [h, m] = timeStr.split(':').map(Number)
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setHours(h, m, 0, 0)
+  return Timestamp.fromDate(d)
+}
+
+export async function getAttendanceForEmployeeDate(uid, dateStr) {
+  const q = query(
+    collection(db, 'attendance'),
+    where('uid', '==', uid),
+    where('date', '==', dateStr),
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.checkIn?.seconds || 0) - (b.checkIn?.seconds || 0))
+}
+
+export async function manualCheckIn(uid, userName, dateStr, timeStr) {
+  await addDoc(collection(db, 'attendance'), {
+    uid, userName, date: dateStr,
+    checkIn: toTimestamp(dateStr, timeStr),
+    checkOut: null,
+    closureComplete: false,
+    manualEntry: true,
+  })
+}
+
+export async function manualCheckOut(sessionId, dateStr, timeStr) {
+  await updateDoc(doc(db, 'attendance', sessionId), {
+    checkOut: toTimestamp(dateStr, timeStr),
+    manualEntry: true,
+  })
+}
+
+export async function updateAttendanceSession(sessionId, dateStr, checkInTime, checkOutTime) {
+  await updateDoc(doc(db, 'attendance', sessionId), {
+    checkIn: toTimestamp(dateStr, checkInTime),
+    checkOut: checkOutTime ? toTimestamp(dateStr, checkOutTime) : null,
+    manualEntry: true,
+  })
+}
+
+export async function deleteAttendanceSession(sessionId) {
+  await deleteDoc(doc(db, 'attendance', sessionId))
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────────────
