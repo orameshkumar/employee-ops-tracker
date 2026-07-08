@@ -26,7 +26,8 @@ const s = {
 export default function ClosureTasks() {
   const { user, profile } = useAuth()
   const { settings, loading: settingsLoading } = useAppSettings()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  function taskLabel(task) { return lang === 'ta' && task.ta ? task.ta : task.en }
   const [saved, setSaved] = useState([])
   const [photoMap, setPhotoMap] = useState({})
   const [saving, setSaving] = useState({})
@@ -37,7 +38,7 @@ export default function ClosureTasks() {
   }, [user.uid])
 
   const taskList = settings.closureTasks || []
-  const savedNames = saved.map(t => t.taskName)
+  const savedNames = saved.map(s => s.taskName)
   const allDone = taskList.length > 0 && savedNames.length >= taskList.length
   const pct = taskList.length > 0 ? Math.round((savedNames.length / taskList.length) * 100) : 0
 
@@ -95,12 +96,12 @@ export default function ClosureTasks() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        {taskList.map(taskName => {
-          const isDone = savedNames.includes(taskName)
-          const doneData = saved.find(d => d.taskName === taskName)
+        {taskList.map(task => {
+          const isDone = savedNames.includes(task.en)
+          const doneData = saved.find(d => d.taskName === task.en)
           return (
-            <div key={taskName} style={{ ...s.card, ...(isDone ? s.completedCard : {}) }}>
-              <div style={s.taskName}>{taskName}</div>
+            <div key={task.en} style={{ ...s.card, ...(isDone ? s.completedCard : {}) }}>
+              <div style={s.taskName}>{taskLabel(task)}</div>
               {isDone ? (
                 <div style={s.done}>
                   {t('common_completed')}
@@ -108,9 +109,9 @@ export default function ClosureTasks() {
                 </div>
               ) : (
                 <>
-                  <PhotoCapture label={t('common_capture_photo')} onPhoto={(d) => handlePhoto(taskName, d)} />
-                  <button style={s.btn} onClick={() => submitTask(taskName)} disabled={saving[taskName]}>
-                    {saving[taskName] ? t('common_saving') : t('common_mark_complete')}
+                  <PhotoCapture label={t('common_capture_photo')} onPhoto={(d) => handlePhoto(task.en, d)} />
+                  <button style={s.btn} onClick={() => submitTask(task.en)} disabled={saving[task.en]}>
+                    {saving[task.en] ? t('common_saving') : t('common_mark_complete')}
                   </button>
                 </>
               )}

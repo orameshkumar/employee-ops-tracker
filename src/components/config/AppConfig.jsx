@@ -31,12 +31,14 @@ const s = {
   themeLabel: (active) => ({ fontSize: '0.78rem', fontWeight: active ? 700 : 400, color: active ? 'var(--app-text, #e2e8f0)' : 'var(--app-muted, #64748b)', textAlign: 'center' }),
 }
 
-function TaskListEditor({ tasks, onChange, accentColor = '#3b82f6' }) {
-  const [newTask, setNewTask] = useState('')
+function TaskListEditor({ tasks, onChange }) {
+  const [newEn, setNewEn] = useState('')
+  const [newTa, setNewTa] = useState('')
 
-  function update(i, val) {
+  // tasks is { en, ta }[]
+  function update(i, field, val) {
     const updated = [...tasks]
-    updated[i] = val
+    updated[i] = { ...updated[i], [field]: val }
     onChange(updated)
   }
 
@@ -59,10 +61,10 @@ function TaskListEditor({ tasks, onChange, accentColor = '#3b82f6' }) {
   }
 
   function addTask() {
-    const trimmed = newTask.trim()
+    const trimmed = newEn.trim()
     if (!trimmed) return
-    onChange([...tasks, trimmed])
-    setNewTask('')
+    onChange([...tasks, { en: trimmed, ta: newTa.trim() }])
+    setNewEn(''); setNewTa('')
   }
 
   function handleKeyDown(e) {
@@ -72,25 +74,54 @@ function TaskListEditor({ tasks, onChange, accentColor = '#3b82f6' }) {
   return (
     <div>
       <div style={s.taskCount}>{tasks.length} task{tasks.length !== 1 ? 's' : ''}</div>
+
+      {/* Column headers */}
+      {tasks.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 6, paddingLeft: 28 }}>
+          <span style={{ flex: 1, color: '#475569', fontSize: '0.7rem' }}>English</span>
+          <span style={{ flex: 1, color: '#475569', fontSize: '0.7rem' }}>தமிழ் (Tamil)</span>
+          <span style={{ width: 88, flexShrink: 0 }} />
+        </div>
+      )}
+
       {tasks.map((task, i) => (
-        <div key={i} style={s.taskRow}>
-          <span style={{ color: '#475569', fontSize: '0.75rem', width: 20, flexShrink: 0 }}>{i + 1}</span>
-          <input
-            style={s.taskInput}
-            value={task}
-            onChange={e => update(i, e.target.value)}
-          />
-          <button style={s.iconBtn('up')} onClick={() => moveUp(i)} title="Move up" disabled={i === 0}>↑</button>
-          <button style={s.iconBtn('down')} onClick={() => moveDown(i)} title="Move down" disabled={i === tasks.length - 1}>↓</button>
-          <button style={s.iconBtn('red')} onClick={() => remove(i)} title="Remove">✕</button>
+        <div key={i} style={{ ...s.taskRow, alignItems: 'flex-start' }}>
+          <span style={{ color: '#475569', fontSize: '0.75rem', width: 20, flexShrink: 0, paddingTop: 8 }}>{i + 1}</span>
+          <div style={{ flex: 1, display: 'flex', gap: 6 }}>
+            <input
+              style={{ ...s.taskInput, flex: 1 }}
+              value={task.en}
+              onChange={e => update(i, 'en', e.target.value)}
+              placeholder="English name"
+            />
+            <input
+              style={{ ...s.taskInput, flex: 1, fontFamily: 'inherit' }}
+              value={task.ta}
+              onChange={e => update(i, 'ta', e.target.value)}
+              placeholder="தமிழ் பெயர்"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button style={s.iconBtn('up')} onClick={() => moveUp(i)} title="Move up" disabled={i === 0}>↑</button>
+            <button style={s.iconBtn('down')} onClick={() => moveDown(i)} title="Move down" disabled={i === tasks.length - 1}>↓</button>
+            <button style={s.iconBtn('red')} onClick={() => remove(i)} title="Remove">✕</button>
+          </div>
         </div>
       ))}
-      <div style={s.addRow}>
+
+      <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
         <input
-          style={s.addInput}
-          placeholder="+ Add new task…"
-          value={newTask}
-          onChange={e => setNewTask(e.target.value)}
+          style={{ ...s.addInput, flex: 1 }}
+          placeholder="+ English name"
+          value={newEn}
+          onChange={e => setNewEn(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <input
+          style={{ ...s.addInput, flex: 1, fontFamily: 'inherit' }}
+          placeholder="+ தமிழ் பெயர் (optional)"
+          value={newTa}
+          onChange={e => setNewTa(e.target.value)}
           onKeyDown={handleKeyDown}
         />
         <button style={s.addBtn} onClick={addTask}>Add</button>

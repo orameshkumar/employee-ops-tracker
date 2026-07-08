@@ -33,9 +33,19 @@ export const DEFAULT_SETTINGS = {
   ],
 }
 
+// Normalize tasks: old string[] → { en, ta }[] for backward compatibility
+function normalizeTasks(arr) {
+  return (arr || []).map(t => (typeof t === 'string' ? { en: t, ta: '' } : t))
+}
+
 export async function loadSettings() {
   const snap = await getDoc(doc(db, 'settings', 'app'))
-  return snap.exists() ? { ...DEFAULT_SETTINGS, ...snap.data() } : DEFAULT_SETTINGS
+  const raw = snap.exists() ? { ...DEFAULT_SETTINGS, ...snap.data() } : DEFAULT_SETTINGS
+  return {
+    ...raw,
+    dailyTasks: normalizeTasks(raw.dailyTasks),
+    closureTasks: normalizeTasks(raw.closureTasks),
+  }
 }
 
 export async function saveSettings(data) {
