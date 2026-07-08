@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { saveSales, getTodaySales } from '../../firebase/firestore'
 import { useLanguage } from '../../contexts/LanguageContext'
 
-const ONLINE_METHODS = ['UPI / QR Pay', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet']
+const ONLINE_METHODS = ['UPI / QR Pay', 'Wallet']
 
 const s = {
   wrap: { padding: '20px 16px', maxWidth: 600, margin: '0 auto' },
