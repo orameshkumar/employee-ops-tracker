@@ -292,9 +292,6 @@ export default function QRScanner() {
           </div>
         </div>
 
-        {isCheckedIn && !closureReady && (
-          <div style={s.warningBox}>{t('qr_warning_closure')}</div>
-        )}
 
         <div>
           {sessions.length === 0 && (
