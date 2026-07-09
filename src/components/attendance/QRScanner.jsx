@@ -263,7 +263,7 @@ export default function QRScanner() {
     const fresh = await getTodayAttendance(user.uid).catch(() => sessions)
     setSessions(fresh)
     const freshOpen = fresh.find(s => s.checkIn && !s.checkOut)
-    if (isPastShopEnd && !freshOpen?.closureComplete) {
+    if (!freshOpen?.closureComplete) {
       setMessage({ ok: null, text: t('qr_warn_closure') })
     }
     requestCameraAndScan()
@@ -292,7 +292,7 @@ export default function QRScanner() {
           </div>
         </div>
 
-        {isPastShopEnd && isCheckedIn && !closureReady && (
+        {isCheckedIn && !closureReady && (
           <div style={s.warningBox}>{t('qr_warning_closure')}</div>
         )}
 
@@ -354,10 +354,10 @@ export default function QRScanner() {
           {isCheckedIn && (
             <button
               style={s.btn('red')}
-              onClick={isPastShopEnd ? handleCheckoutClick : requestCameraAndScan}
+              onClick={handleCheckoutClick}
               disabled={permState === 'requesting'}
             >
-              {permState === 'requesting' ? t('qr_requesting') : (isPastShopEnd ? t('qr_scan_out_final') : t('qr_scan_out_break'))}
+              {permState === 'requesting' ? t('qr_requesting') : t('qr_scan_out_break')}
             </button>
           )}
         </div>
