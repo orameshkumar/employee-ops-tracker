@@ -1,10 +1,11 @@
 import { fmtDate } from '../../utils/dateUtils'
 
 // Shows DD MMM YYYY visually; transparent native date input handles picking.
-export default function DateInput({ value, onChange, style, placeholder = 'DD MMM YYYY' }) {
+export default function DateInput({ value, onChange, style, placeholder = 'DD MMM YYYY', id }) {
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
       <input
+        id={id}
         type="text"
         readOnly
         value={value ? fmtDate(value) : ''}
