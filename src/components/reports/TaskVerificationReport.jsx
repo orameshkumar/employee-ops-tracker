@@ -231,16 +231,16 @@ export default function TaskVerificationReport() {
         <div className="no-print" style={s.filterCard}>
           <div style={s.filterRow}>
             <div style={s.field}>
-              <span style={s.label}>From Date</span>
-              <DateInput style={s.input} value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              <label htmlFor="tvr-from-date" style={s.label}>From Date</label>
+              <DateInput id="tvr-from-date" style={s.input} value={fromDate} onChange={e => setFromDate(e.target.value)} />
             </div>
             <div style={s.field}>
-              <span style={s.label}>To Date</span>
-              <DateInput style={s.input} value={toDate} onChange={e => setToDate(e.target.value)} />
+              <label htmlFor="tvr-to-date" style={s.label}>To Date</label>
+              <DateInput id="tvr-to-date" style={s.input} value={toDate} onChange={e => setToDate(e.target.value)} />
             </div>
             <div style={s.field}>
-              <span style={s.label}>Employee</span>
-              <select style={s.select} value={selEmployee} onChange={e => setSelEmployee(e.target.value)}>
+              <label htmlFor="tvr-employee" style={s.label}>Employee</label>
+              <select id="tvr-employee" style={s.select} value={selEmployee} onChange={e => setSelEmployee(e.target.value)}>
                 <option value="all">All Employees</option>
                 {employees.map(emp => (
                   <option key={emp.uid} value={emp.uid}>{emp.name || emp.email}</option>

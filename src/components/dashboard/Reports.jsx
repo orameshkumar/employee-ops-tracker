@@ -134,12 +134,12 @@ export default function Reports() {
       {tab === 'reports' && <div>
       <div style={s.filterBar}>
         <div style={s.field}>
-          <label style={s.label}>From Date</label>
-          <DateInput style={s.input} value={from} onChange={e => setFrom(e.target.value)} />
+          <label htmlFor="reports-from-date" style={s.label}>From Date</label>
+          <DateInput id="reports-from-date" style={s.input} value={from} onChange={e => setFrom(e.target.value)} />
         </div>
         <div style={s.field}>
-          <label style={s.label}>To Date</label>
-          <DateInput style={s.input} value={to} onChange={e => setTo(e.target.value)} />
+          <label htmlFor="reports-to-date" style={s.label}>To Date</label>
+          <DateInput id="reports-to-date" style={s.input} value={to} onChange={e => setTo(e.target.value)} />
         </div>
         <button style={s.btn} onClick={fetchData} disabled={loading}>
           {loading ? 'Loading…' : '🔍 Run Report'}

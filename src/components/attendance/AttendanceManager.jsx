@@ -148,14 +148,14 @@ export default function AttendanceManager() {
       {/* Filters */}
       <div style={s.filterCard}>
         <div style={s.field}>
-          <span style={s.label}>Employee</span>
-          <select style={s.select} value={selUid} onChange={e => { setSelUid(e.target.value); setLoaded(false); setSessions([]) }}>
+          <label htmlFor="attendance-employee" style={s.label}>Employee</label>
+          <select id="attendance-employee" style={s.select} value={selUid} onChange={e => { setSelUid(e.target.value); setLoaded(false); setSessions([]) }}>
             {employees.map(e => <option key={e.uid} value={e.uid}>{e.name || e.email}</option>)}
           </select>
         </div>
         <div style={s.field}>
-          <span style={s.label}>Date</span>
-          <DateInput style={s.input} value={date} onChange={e => { setDate(e.target.value); setLoaded(false); setSessions([]) }} />
+          <label htmlFor="attendance-date" style={s.label}>Date</label>
+          <DateInput id="attendance-date" style={s.input} value={date} onChange={e => { setDate(e.target.value); setLoaded(false); setSessions([]) }} />
         </div>
         <button style={s.btn('blue')} onClick={loadSessions}>🔍 Load</button>
       </div>
@@ -196,13 +196,13 @@ export default function AttendanceManager() {
                     <div>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
                         <div style={s.field}>
-                          <span style={s.label}>Check-In Time *</span>
-                          <input style={s.timeInput} type="time" value={editing.checkInTime}
+                          <label htmlFor={`edit-checkin-${sess.id}`} style={s.label}>Check-In Time *</label>
+                          <input id={`edit-checkin-${sess.id}`} style={s.timeInput} type="time" value={editing.checkInTime}
                             onChange={e => setEditing(p => ({ ...p, checkInTime: e.target.value }))} />
                         </div>
                         <div style={s.field}>
-                          <span style={s.label}>Check-Out Time</span>
-                          <input style={s.timeInput} type="time" value={editing.checkOutTime}
+                          <label htmlFor={`edit-checkout-${sess.id}`} style={s.label}>Check-Out Time</label>
+                          <input id={`edit-checkout-${sess.id}`} style={s.timeInput} type="time" value={editing.checkOutTime}
                             onChange={e => setEditing(p => ({ ...p, checkOutTime: e.target.value }))} />
                         </div>
                       </div>
@@ -237,12 +237,12 @@ export default function AttendanceManager() {
               <div style={s.addTitle}>➕ Add New Session</div>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
                 <div style={s.field}>
-                  <span style={s.label}>Check-In Time *</span>
-                  <input style={s.timeInput} type="time" value={addInTime} onChange={e => setAddInTime(e.target.value)} />
+                  <label htmlFor="add-checkin-time" style={s.label}>Check-In Time *</label>
+                  <input id="add-checkin-time" style={s.timeInput} type="time" value={addInTime} onChange={e => setAddInTime(e.target.value)} />
                 </div>
                 <div style={s.field}>
-                  <span style={s.label}>Check-Out Time (optional)</span>
-                  <input style={s.timeInput} type="time" value={addOutTime} onChange={e => setAddOutTime(e.target.value)} />
+                  <label htmlFor="add-checkout-time" style={s.label}>Check-Out Time (optional)</label>
+                  <input id="add-checkout-time" style={s.timeInput} type="time" value={addOutTime} onChange={e => setAddOutTime(e.target.value)} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>

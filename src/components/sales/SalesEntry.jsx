@@ -93,8 +93,9 @@ export default function SalesEntry() {
           <div style={s.sectionTitle}>{t('sales_online_section')}</div>
           {ONLINE_METHODS.map(method => (
             <div key={method} style={s.row}>
-              <span style={s.label}>{method}</span>
+              <label htmlFor={`online-method-${method}`} style={s.label}>{method}</label>
               <input
+                id={`online-method-${method}`}
                 style={s.input}
                 type="number"
                 min="0"
@@ -114,8 +115,9 @@ export default function SalesEntry() {
         <div style={s.section}>
           <div style={s.sectionTitle}>{t('sales_cash_section')}</div>
           <div style={s.row}>
-            <span style={s.label}>{t('sales_total_cash')}</span>
+            <label htmlFor="sales-cash" style={s.label}>{t('sales_total_cash')}</label>
             <input
+              id="sales-cash"
               style={s.input}
               type="number"
               min="0"
@@ -134,7 +136,9 @@ export default function SalesEntry() {
 
         <div style={s.section}>
           <div style={s.sectionTitle}>{t('sales_notes_section')}</div>
+          <label htmlFor="sales-notes" style={{ display: 'none' }}>{t('sales_notes_section')}</label>
           <textarea
+            id="sales-notes"
             style={{ width: '100%', minHeight: 70, resize: 'vertical', padding: '8px 10px', borderRadius: 6, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
             placeholder={t('sales_notes_placeholder')}
             value={notes}

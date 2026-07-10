@@ -81,12 +81,12 @@ export default function Login() {
           <>
             <form onSubmit={handleLogin}>
               <div style={s.field}>
-                <label style={s.label}>Email</label>
-                <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+                <label style={s.label} htmlFor="login-email">Email</label>
+                <input id="login-email" style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div style={s.field}>
-                <label style={s.label}>Password</label>
-                <input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+                <label style={s.label} htmlFor="login-password">Password</label>
+                <input id="login-password" style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <button style={{ ...s.btn, ...s.primary }} type="submit" disabled={loading}>
                 {loading ? 'Signing in…' : 'Sign In'}
@@ -98,20 +98,20 @@ export default function Login() {
         {tab === 'register' && (
           <form onSubmit={handleRegister}>
             <div style={s.field}>
-              <label style={s.label}>Full Name *</label>
-              <input style={s.input} type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" required />
+              <label style={s.label} htmlFor="register-name">Full Name *</label>
+              <input id="register-name" style={s.input} type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" required />
             </div>
             <div style={s.field}>
-              <label style={s.label}>Email *</label>
-              <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+              <label style={s.label} htmlFor="register-email">Email *</label>
+              <input id="register-email" style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div style={s.field}>
-              <label style={s.label}>Password * (min 6 characters)</label>
-              <input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" />
+              <label style={s.label} htmlFor="register-password">Password * (min 6 characters)</label>
+              <input id="register-password" style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" />
             </div>
             <div style={s.field}>
-              <label style={s.label}>Confirm Password *</label>
-              <input style={s.input} type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" />
+              <label style={s.label} htmlFor="register-confirm-password">Confirm Password *</label>
+              <input id="register-confirm-password" style={s.input} type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" />
             </div>
             <button style={{ ...s.btn, ...s.success }} type="submit" disabled={loading}>
               {loading ? 'Creating account…' : '✅ Create Employee Account'}

@@ -122,12 +122,12 @@ export default function HistoryPage() {
       {/* Filter bar */}
       <div style={s.filterBar}>
         <div style={s.filterField}>
-          <span style={s.filterLabel}>From</span>
-          <DateInput style={s.input} value={fromDate} onChange={e => { setFromDate(e.target.value); setQuickRange('') }} />
+          <label htmlFor="filter-from-date" style={s.filterLabel}>From</label>
+          <DateInput id="filter-from-date" style={s.input} value={fromDate} onChange={e => { setFromDate(e.target.value); setQuickRange('') }} />
         </div>
         <div style={s.filterField}>
-          <span style={s.filterLabel}>To</span>
-          <DateInput style={s.input} value={toDate} onChange={e => { setToDate(e.target.value); setQuickRange('') }} />
+          <label htmlFor="filter-to-date" style={s.filterLabel}>To</label>
+          <DateInput id="filter-to-date" style={s.input} value={toDate} onChange={e => { setToDate(e.target.value); setQuickRange('') }} />
         </div>
         <div style={s.quickBtns}>
           {[['7d','7 Days'],['30d','30 Days'],['90d','90 Days'],['1y','1 Year']].map(([k,l]) => (
@@ -326,23 +326,23 @@ function SalesEditModal({ record, onClose, onSaved }) {
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         <div style={s.modalTitle}>✏ Edit Sales Record</div>
         <div style={s.field}>
-          <label style={s.fieldLabel}>Date</label>
-          <DateInput style={s.fieldInput} value={date} onChange={e => setDate(e.target.value)} />
+          <label htmlFor="sales-edit-date" style={s.fieldLabel}>Date</label>
+          <DateInput id="sales-edit-date" style={s.fieldInput} value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <div style={{ ...s.field }}>
           <label style={s.fieldLabel}>Online Sales</label>
           {ONLINE_METHODS.map(m => (
             <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ color: '#64748b', fontSize: '0.8rem', width: 140, flexShrink: 0 }}>{m}</span>
-              <input style={{ ...s.fieldInput, padding: '6px 10px' }} type="number" min="0" step="0.01"
+              <label htmlFor={`sales-online-method-${m}`} style={{ color: '#64748b', fontSize: '0.8rem', width: 140, flexShrink: 0 }}>{m}</label>
+              <input id={`sales-online-method-${m}`} style={{ ...s.fieldInput, padding: '6px 10px' }} type="number" min="0" step="0.01"
                 value={online[m]} onChange={e => setOnline(p => ({ ...p, [m]: e.target.value }))} />
             </div>
           ))}
         </div>
         <div style={s.row2}>
           <div style={s.field}>
-            <label style={s.fieldLabel}>Cash Sales (₹)</label>
-            <input style={s.fieldInput} type="number" min="0" step="0.01" value={cash} onChange={e => setCash(e.target.value)} />
+            <label htmlFor="sales-edit-cash" style={s.fieldLabel}>Cash Sales (₹)</label>
+            <input id="sales-edit-cash" style={s.fieldInput} type="number" min="0" step="0.01" value={cash} onChange={e => setCash(e.target.value)} />
           </div>
           <div style={s.field}>
             <label style={s.fieldLabel}>Grand Total</label>
@@ -350,8 +350,8 @@ function SalesEditModal({ record, onClose, onSaved }) {
           </div>
         </div>
         <div style={s.field}>
-          <label style={s.fieldLabel}>Notes</label>
-          <input style={s.fieldInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional…" />
+          <label htmlFor="sales-edit-notes" style={s.fieldLabel}>Notes</label>
+          <input id="sales-edit-notes" style={s.fieldInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional…" />
         </div>
         <div style={s.modalBtns}>
           <button style={s.cancelBtn} onClick={onClose}>Cancel</button>
@@ -394,29 +394,29 @@ function ExpenseEditModal({ record, user, onClose, onSaved }) {
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         <div style={s.modalTitle}>✏ Edit Expense</div>
         <div style={s.field}>
-          <label style={s.fieldLabel}>Description *</label>
-          <input style={s.fieldInput} value={form.description} onChange={e => set('description', e.target.value)} required />
+          <label htmlFor="expense-edit-description" style={s.fieldLabel}>Description *</label>
+          <input id="expense-edit-description" style={s.fieldInput} value={form.description} onChange={e => set('description', e.target.value)} required />
         </div>
         <div style={s.row2}>
           <div style={s.field}>
-            <label style={s.fieldLabel}>Amount (₹) *</label>
-            <input style={s.fieldInput} type="number" min="0" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} required />
+            <label htmlFor="expense-edit-amount" style={s.fieldLabel}>Amount (₹) *</label>
+            <input id="expense-edit-amount" style={s.fieldInput} type="number" min="0" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} required />
           </div>
           <div style={s.field}>
-            <label style={s.fieldLabel}>Date</label>
-            <DateInput style={s.fieldInput} value={form.date} onChange={e => set('date', e.target.value)} />
+            <label htmlFor="expense-edit-date" style={s.fieldLabel}>Date</label>
+            <DateInput id="expense-edit-date" style={s.fieldInput} value={form.date} onChange={e => set('date', e.target.value)} />
           </div>
         </div>
         <div style={s.row2}>
           <div style={s.field}>
-            <label style={s.fieldLabel}>Category</label>
-            <select style={{ ...s.fieldInput, padding: '8px 10px' }} value={form.category} onChange={e => set('category', e.target.value)}>
+            <label htmlFor="expense-edit-category" style={s.fieldLabel}>Category</label>
+            <select id="expense-edit-category" style={{ ...s.fieldInput, padding: '8px 10px' }} value={form.category} onChange={e => set('category', e.target.value)}>
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div style={s.field}>
-            <label style={s.fieldLabel}>Status</label>
-            <select style={{ ...s.fieldInput, padding: '8px 10px' }} value={form.status} onChange={e => set('status', e.target.value)}>
+            <label htmlFor="expense-edit-status" style={s.fieldLabel}>Status</label>
+            <select id="expense-edit-status" style={{ ...s.fieldInput, padding: '8px 10px' }} value={form.status} onChange={e => set('status', e.target.value)}>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
@@ -424,8 +424,8 @@ function ExpenseEditModal({ record, user, onClose, onSaved }) {
           </div>
         </div>
         <div style={s.field}>
-          <label style={s.fieldLabel}>Notes</label>
-          <input style={s.fieldInput} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional…" />
+          <label htmlFor="expense-edit-notes" style={s.fieldLabel}>Notes</label>
+          <input id="expense-edit-notes" style={s.fieldInput} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional…" />
         </div>
         {record.receiptUrl && (
           <div style={{ marginBottom: 12 }}>

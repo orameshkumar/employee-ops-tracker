@@ -197,19 +197,19 @@ export default function AppConfig() {
         <div style={s.section}>
           <div style={s.sectionTitle}>🏪 Shop Identity</div>
           <div style={s.field}>
-            <label style={s.label}>Shop Name</label>
-            <input style={s.input} value={form.shopName} onChange={e => set('shopName', e.target.value)} placeholder="Enter your shop name" />
+            <label style={s.label} htmlFor="config-shop-name">Shop Name</label>
+            <input id="config-shop-name" style={s.input} value={form.shopName} onChange={e => set('shopName', e.target.value)} placeholder="Enter your shop name" />
             <div style={s.hint}>Displayed in the app header and reports</div>
           </div>
           <div style={s.row2}>
             <div style={s.field}>
-              <label style={s.label}>Shop Opening Time</label>
-              <input style={s.input} type="time" value={form.shopStartTime} onChange={e => set('shopStartTime', e.target.value)} />
+              <label style={s.label} htmlFor="config-shop-open-time">Shop Opening Time</label>
+              <input id="config-shop-open-time" style={s.input} type="time" value={form.shopStartTime} onChange={e => set('shopStartTime', e.target.value)} />
               <div style={s.hint}>First check-in expected from this time</div>
             </div>
             <div style={s.field}>
-              <label style={s.label}>Shop Closing Time</label>
-              <input style={s.input} type="time" value={form.shopEndTime} onChange={e => set('shopEndTime', e.target.value)} />
+              <label style={s.label} htmlFor="config-shop-close-time">Shop Closing Time</label>
+              <input id="config-shop-close-time" style={s.input} type="time" value={form.shopEndTime} onChange={e => set('shopEndTime', e.target.value)} />
               <div style={s.hint}>Closure tasks required for sign-out after this time</div>
             </div>
           </div>
@@ -241,29 +241,29 @@ export default function AppConfig() {
           <div style={s.sectionTitle}>📷 Image Upload Settings</div>
           <div style={s.row2}>
             <div style={s.field}>
-              <label style={s.label}>Max Width (px)</label>
-              <input style={s.input} type="number" min="320" max="3840" step="80"
+              <label style={s.label} htmlFor="config-image-max-width">Max Width (px)</label>
+              <input id="config-image-max-width" style={s.input} type="number" min="320" max="3840" step="80"
                 value={form.imageMaxWidth} onChange={e => set('imageMaxWidth', parseInt(e.target.value))} />
             </div>
             <div style={s.field}>
-              <label style={s.label}>Max Height (px)</label>
-              <input style={s.input} type="number" min="240" max="2160" step="60"
+              <label style={s.label} htmlFor="config-image-max-height">Max Height (px)</label>
+              <input id="config-image-max-height" style={s.input} type="number" min="240" max="2160" step="60"
                 value={form.imageMaxHeight} onChange={e => set('imageMaxHeight', parseInt(e.target.value))} />
             </div>
           </div>
           <div style={s.field}>
-            <label style={s.label}>
+            <label style={s.label} htmlFor="config-image-max-size-kb">
               Max File Size (KB) <span style={s.rangeVal}>{form.imageMaxSizeKB} KB</span>
             </label>
-            <input style={s.range} type="range" min="100" max="2000" step="50"
+            <input id="config-image-max-size-kb" style={s.range} type="range" min="100" max="2000" step="50"
               value={form.imageMaxSizeKB} onChange={e => set('imageMaxSizeKB', parseInt(e.target.value))} />
             <div style={s.hint}>Images above this size will be compressed automatically</div>
           </div>
           <div style={s.field}>
-            <label style={s.label}>
+            <label style={s.label} htmlFor="config-image-jpeg-quality">
               JPEG Quality <span style={s.rangeVal}>{Math.round(form.imageQuality * 100)}%</span>
             </label>
-            <input style={s.range} type="range" min="0.3" max="1.0" step="0.05"
+            <input id="config-image-jpeg-quality" style={s.range} type="range" min="0.3" max="1.0" step="0.05"
               value={form.imageQuality} onChange={e => set('imageQuality', parseFloat(e.target.value))} />
           </div>
           <div style={{ background: '#0f172a', borderRadius: 8, padding: 10, marginTop: 4 }}>

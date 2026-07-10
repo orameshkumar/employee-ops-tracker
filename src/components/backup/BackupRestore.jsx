@@ -234,9 +234,9 @@ export default function BackupRestore() {
       <div style={s.section}>
         <div style={s.sectionTitle}>🔔 Backup Reminder</div>
         <div style={{ marginBottom: 14 }}>
-          <label style={s.label}>Remind me every</label>
+          <label htmlFor="backup-reminder-days" style={s.label}>Remind me every</label>
           <div style={s.row}>
-            <select style={s.select} value={reminderDays} onChange={e => setReminderDays(parseInt(e.target.value))}>
+            <select id="backup-reminder-days" style={s.select} value={reminderDays} onChange={e => setReminderDays(parseInt(e.target.value))}>
               <option value={1}>Every day</option>
               <option value={3}>Every 3 days</option>
               <option value={7}>Every week</option>

@@ -132,17 +132,17 @@ export default function EmployeeManagement() {
           <div style={s.sectionTitle}>➕ Create New Employee Account</div>
           <form onSubmit={handleCreate}>
             <div style={s.field}>
-              <label style={s.label}>Full Name *</label>
-              <input style={s.input} type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Employee full name" required />
+              <label htmlFor="emp-full-name" style={s.label}>Full Name *</label>
+              <input id="emp-full-name" style={s.input} type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Employee full name" required />
             </div>
             <div style={s.row2}>
               <div style={s.field}>
-                <label style={s.label}>Email Address *</label>
-                <input style={s.input} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+                <label htmlFor="emp-email" style={s.label}>Email Address *</label>
+                <input id="emp-email" style={s.input} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
               </div>
               <div style={s.field}>
-                <label style={s.label}>Temporary Password *</label>
-                <input style={s.input} type="text" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="min 6 characters" required />
+                <label htmlFor="emp-password" style={s.label}>Temporary Password *</label>
+                <input id="emp-password" style={s.input} type="text" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="min 6 characters" required />
                 <div style={s.hint}>Share this with the employee; they can update it later</div>
               </div>
             </div>

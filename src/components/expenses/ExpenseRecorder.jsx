@@ -103,29 +103,29 @@ export default function ExpenseRecorder() {
           <form onSubmit={handleSubmit}>
             <div style={s.row}>
               <div style={s.field}>
-                <label style={s.label}>{t('expense_desc_label')}</label>
-                <input style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder={t('expense_desc_placeholder')} required />
+                <label htmlFor="expense-description" style={s.label}>{t('expense_desc_label')}</label>
+                <input id="expense-description" style={s.input} value={form.description} onChange={e => setField('description', e.target.value)} placeholder={t('expense_desc_placeholder')} required />
               </div>
               <div style={s.field}>
-                <label style={s.label}>{t('expense_amount_label')}</label>
-                <input style={s.input} type="number" min="0" step="0.01" value={form.amount} onChange={e => setField('amount', e.target.value)} placeholder="0.00" required />
+                <label htmlFor="expense-amount" style={s.label}>{t('expense_amount_label')}</label>
+                <input id="expense-amount" style={s.input} type="number" min="0" step="0.01" value={form.amount} onChange={e => setField('amount', e.target.value)} placeholder="0.00" required />
               </div>
             </div>
             <div style={s.row}>
               <div style={s.field}>
-                <label style={s.label}>{t('expense_category_label')}</label>
-                <select style={s.select} value={form.category} onChange={e => setField('category', e.target.value)}>
+                <label htmlFor="expense-category" style={s.label}>{t('expense_category_label')}</label>
+                <select id="expense-category" style={s.select} value={form.category} onChange={e => setField('category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div style={s.field}>
-                <label style={s.label}>{t('expense_date_label')}</label>
-                <DateInput style={s.input} value={form.date} onChange={e => setField('date', e.target.value)} />
+                <label htmlFor="expense-date" style={s.label}>{t('expense_date_label')}</label>
+                <DateInput id="expense-date" style={s.input} value={form.date} onChange={e => setField('date', e.target.value)} />
               </div>
             </div>
             <div style={s.field}>
-              <label style={s.label}>{t('expense_notes_label')}</label>
-              <input style={s.input} value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder={t('expense_notes_placeholder')} />
+              <label htmlFor="expense-notes" style={s.label}>{t('expense_notes_label')}</label>
+              <input id="expense-notes" style={s.input} value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder={t('expense_notes_placeholder')} />
             </div>
             <PhotoCapture label={t('expense_receipt_label')} onPhoto={setPhoto} />
             <button style={s.btn} type="submit" disabled={saving}>{saving ? t('common_saving') : t('expense_submit_btn')}</button>
